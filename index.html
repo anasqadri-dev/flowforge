@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FlowForge - A browser-based visual workflow automation platform.">
+    <title>FlowForge | Workflow Automation</title>
+    <link rel="stylesheet" href="src/css/app-shell.css">
+</head>
+
+<body>
+    <!-- Application Sidebar -->
+    <aside class="sidebar">
+        <h2>FlowForge</h2>
+        <nav aria-label="Main navigation">
+            <a href="#dashboard" class="active">Dashboard</a>
+            <a href="#builder" data-coming-soon>Builder</a>
+            <a href="#runs" data-coming-soon>Runs</a>
+            <a href="#templates" data-coming-soon>Templates</a>
+            <a href="#settings" data-coming-soon>Settings</a>
+        </nav>
+        <button type="button" id="theme-toggle">Change Theme</button>
+    </aside>
+
+    <!-- Main Application Content -->
+    <main class="content" id="dashboard">
+        <h1>Dashboard</h1>
+
+        <!-- Statistics -->
+        <section class="stats-grid">
+            <article class="stat-card">
+                <h3 id="stat-workflows">0</h3>
+                <p>Workflows</p>
+            </article>
+            <article class="stat-card">
+                <h3 id="stat-runs">0</h3>
+                <p>Total Runs</p>
+            </article>
+            <article class="stat-card">
+                <h3 id="stat-success">—</h3>
+                <p>Success Rate</p>
+            </article>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="quick-actions">
+            <a href="#builder" class="btn-primary" data-coming-soon>+ New Workflow</a>
+            <a href="#templates" class="btn" data-coming-soon>Browse Templates</a>
+        </section>
+
+        <!-- Recent Workflow Runs -->
+        <section>
+            <h2>Recent Runs</h2>
+            <ul id="recent-runs" class="run-list">
+                <li class="empty">
+                    No runs yet — create a workflow to get started.
+                </li>
+            </ul>
+        </section>
+    </main>
+
+    <!-- Notification Component -->
+    <div
+        id="notification"
+        class="notification"
+        role="status"
+        aria-live="polite">
+    </div>
+
+    <!-- Application JavaScript -->
+    <script src="src/js/app.js" defer></script>
+
+</body>
+</html>
