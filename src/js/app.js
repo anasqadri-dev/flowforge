@@ -18,12 +18,12 @@ function toggleTheme() {
 let notificationTimeout;
 
 function showNotification(message) {
-    notification.textContent = message;
-    notification.style.display = "block";
-    clearTimeout(notificationTimeout);
-    notificationTimeout = setTimeout(() => {
-      notification.style.display = "none";
-    }, 3000);
+  notification.textContent = message;
+  notification.classList.add("show");
+  clearTimeout(notificationTimeout);
+  notificationTimeout = setTimeout(() => {
+    notification.classList.remove("show");
+  }, 3000);
 }
 
 function initializeNavigation() {
