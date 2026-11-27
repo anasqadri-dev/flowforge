@@ -117,6 +117,7 @@ export function validateWorkflow(workflow) {
         throw new Error('Invalid workflow file structure.');
     }
 
+    const allowedTypes = new Set(['Manual Start', 'Timer (Schedule)', 'HTTP Request', 'Transform Data', 'Set Variable', 'Wait', 'Condition', 'Loop', 'Send Notification', 'Write to Log']);
     const ids = new Set();
     for (const node of workflow.nodes) {
         if (!node || typeof node.id !== 'string' || !node.id.trim() ||
@@ -125,6 +126,7 @@ export function validateWorkflow(workflow) {
             !node.config || typeof node.config !== 'object' || Array.isArray(node.config)) {
             throw new Error('Workflow contains an invalid node.');
         }
+        if (!allowedTypes.has(node.type)) throw new Error(`Unsupported workflow node type: ${node.type}`);
         if (ids.has(node.id)) throw new Error('Workflow contains duplicate node IDs.');
         ids.add(node.id);
     }
@@ -139,6 +141,15 @@ export function validateWorkflow(workflow) {
         if (edges.has(key)) throw new Error('Workflow contains duplicate connections.');
         edges.add(key);
     }
+    const starts = workflow.nodes.filter(node => ['Manual Start', 'Timer (Schedule)'].includes(node.type));
+    if (starts.length !== 1) throw new Error('Workflow must contain exactly one start node.');
+    const indegree = new Map(workflow.nodes.map(node => [node.id, 0]));
+    const adjacency = new Map(workflow.nodes.map(node => [node.id, []]));
+    workflow.connections.forEach(edge => { adjacency.get(edge.from).push(edge.to); indegree.set(edge.to, indegree.get(edge.to) + 1); });
+    const queue = workflow.nodes.filter(node => indegree.get(node.id) === 0).map(node => node.id);
+    let visited = 0;
+    while (queue.length) { const id = queue.shift(); visited++; for (const next of adjacency.get(id)) { indegree.set(next, indegree.get(next) - 1); if (indegree.get(next) === 0) queue.push(next); } }
+    if (visited !== workflow.nodes.length) throw new Error('Workflow contains a circular connection.');
     return true;
 }
 
