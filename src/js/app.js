@@ -11,22 +11,22 @@ function initializeApp() {
 
   try {
     initializeTheme(); 
-    console.log("✅ Theme init called");
+    console.log("Theme initialized.");
   } catch (err) {
-    console.error("❌ Theme failed:", err);
+    console.error("Theme initialization failed:", err);
   }
 
   try {
     initializeSidebar();
   } catch (err) {
-    console.error("❌ Sidebar failed:", err);
+    console.error("Sidebar initialization failed:", err);
   }
 
   try {
     initializePersistence(showNotification);
     initializeNavigation(showNotification);
   } catch (err) {
-    console.error("❌ Navigation failed:", err);
+    console.error("Application initialization failed:", err);
   }
 
   document.addEventListener(
@@ -43,7 +43,7 @@ function initializeApp() {
 
 }
 
-// DOM load hone ka wait karo
+// Wait until the document is ready.
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
