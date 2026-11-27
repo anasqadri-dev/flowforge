@@ -7,7 +7,12 @@ body {
     width: var(--sidebar-width);
     min-width: var(--sidebar-width);
     flex: 0 0 var(--sidebar-width);
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
     min-height: 100vh;
+    overflow-y: auto;
 
     display: flex;
     flex-direction: column;
@@ -41,7 +46,6 @@ body {
 
 .sidebar nav {
     display: flex;
-    flex-direction: column;
     flex-direction: column;
     gap: var(--space-2);
 }
