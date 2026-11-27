@@ -1,5 +1,3 @@
-
-
 import { renderSettingsPanel } from '../components/settings-panel.js';
 
 export function renderBuilder() {
@@ -37,17 +35,10 @@ export function renderBuilder() {
         </div>
       </aside>
 
-      <!-- Center: Canvas (M2) -->
+      <!-- Center: Canvas (M2) - Rete.js container -->
       <main class="canvas-area" id="canvas">
-       <svg id="svg-layer" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 50;">
-    <defs>
-        <!-- arrowhead ko box ke upar dikhane ke liye refX set kiya hai -->
-        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#4f46e5" />
-        </marker>
-    </defs>
-</svg>
-        <p class="canvas-hint">Drag boxes here to build your workflow</p>
+        <div id="rete-container" style="width: 100%; height: 100%;"></div>
+        <p class="canvas-hint" style="pointer-events: none; position: absolute; z-index: 10;">Drag boxes here to build your workflow</p>
       </main>
 
       <!-- Right: Settings Panel (Hidden by default) -->
