@@ -18,9 +18,26 @@ export function initializeNavigation(showNotification) {
     });
 }
 
-window.addEventListener('hashchange', () => {
+function handleRoute() {
     if (window.location.hash === '#builder') {
-        document.querySelector('.content').innerHTML = renderBuilder();
-        setTimeout(() => initNodes(), 0);
+        const content = document.querySelector('.content');
+        if (!content) return;
+
+        try {
+            content.innerHTML = renderBuilder();
+            setTimeout(() => {
+                try {
+                    initNodes();
+                } catch (err) {
+                    console.error("Nodes init failed:", err);
+                }
+            }, 0);
+        } catch (err) {
+            console.error("Builder render failed:", err);
+        }
     }
-}); 
+}
+
+// Dono events pe check karo
+window.addEventListener('hashchange', handleRoute);
+window.addEventListener('DOMContentLoaded', handleRoute);
