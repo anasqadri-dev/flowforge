@@ -10,9 +10,13 @@ export const state = {
   historyIndex: -1,
 };
 
+// Initialize history with empty snapshot
+pushHistory();
+
 export function addNode({ id, type, x, y, config = {} }) {
   state.nodes.push({ id, type, x, y, config });
   pushHistory();
+  return state.nodes[state.nodes.length - 1];
 }
 
 export function updateNodeConfig(nodeId, config) {
@@ -28,6 +32,7 @@ export function moveNode(nodeId, x, y) {
   if (node) {
     node.x = x;
     node.y = y;
+    pushHistory();
   }
 }
 
@@ -52,8 +57,11 @@ export function addConnection({ from, to }) {
 }
 
 export function deleteConnection(connId) {
+  const before = state.connections.length;
   state.connections = state.connections.filter((c) => c.id !== connId);
-  pushHistory();
+  if (state.connections.length !== before) {
+    pushHistory();
+  }
 }
 
 function snapshot() {
@@ -64,8 +72,12 @@ function snapshot() {
 }
 
 export function pushHistory() {
+  const snap = snapshot();
+  // Prevent duplicate consecutive snapshots
+  if (state.history[state.historyIndex] === snap) return;
+  // Clear redo branch
   state.history = state.history.slice(0, state.historyIndex + 1);
-  state.history.push(snapshot());
+  state.history.push(snap);
   state.historyIndex = state.history.length - 1;
 }
 
