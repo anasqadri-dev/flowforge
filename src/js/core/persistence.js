@@ -1,27 +1,21 @@
-
 import {
     saveWorkflow,
     getWorkflows,
     getWorkflow
 } from './database.js';
-
-import { state } from './state.js';
+import { state, replaceWorkflowState } from './state.js';
 
 let saveTimer = null;
 let notificationCallback = null;
+let restorePromise = Promise.resolve();
 
 function notify(message) {
-    if (notificationCallback) {
-        notificationCallback(message);
-        return;
-    }
-
-    const element = document.getElementById('notification');
-
-    if (element) {
+    if (notificationCallback) notificationCallback(message);
+    else {
+        const element = document.getElementById('notification');
+        if (!element) return;
         element.textContent = message;
         element.classList.add('show');
-
         setTimeout(() => element.classList.remove('show'), 2500);
     }
 }
@@ -40,20 +34,12 @@ function createWorkflowData() {
 export async function saveCurrentWorkflow(showMessage = true) {
     try {
         const workflow = createWorkflowData();
-
         await saveWorkflow(workflow);
-
         state.workflowId = workflow.id;
         state.createdAt = workflow.createdAt;
-
         localStorage.setItem('flowforge-active-workflow', workflow.id);
-
-        if (showMessage) {
-            notify('Workflow saved successfully!');
-        }
-
+        if (showMessage) notify('Workflow saved successfully.');
         return workflow;
-
     } catch (error) {
         console.error('Workflow save failed:', error);
         notify('Unable to save workflow.');
@@ -63,202 +49,150 @@ export async function saveCurrentWorkflow(showMessage = true) {
 
 function scheduleAutoSave() {
     clearTimeout(saveTimer);
-
-    saveTimer = setTimeout(() => {
-        saveCurrentWorkflow(false);
-    }, 700);
+    saveTimer = setTimeout(() => saveCurrentWorkflow(false), 700);
 }
 
 export async function loadWorkflowById(id) {
     try {
         const workflow = await getWorkflow(id);
-
         if (!workflow) return false;
-
+        validateWorkflow(workflow);
         state.workflowId = workflow.id;
         state.workflowName = workflow.name || 'Untitled Workflow';
         state.createdAt = workflow.createdAt || Date.now();
-
-        state.nodes = structuredClone(workflow.nodes || []);
-        state.connections = structuredClone(workflow.connections || []);
-
-        state.history = [];
-        state.historyIndex = -1;
-
+        replaceWorkflowState({
+            nodes: workflow.nodes,
+            connections: workflow.connections
+        });
         localStorage.setItem('flowforge-active-workflow', workflow.id);
-
-        document.dispatchEvent(
-            new CustomEvent('flowforge:workflow-loaded', {
-                detail: workflow
-            })
-        );
-
+        document.dispatchEvent(new CustomEvent('flowforge:workflow-loaded', { detail: workflow }));
         return true;
-
     } catch (error) {
         console.error('Workflow loading failed:', error);
-        notify('Unable to load workflow.');
+        notify('Unable to restore the saved workflow.');
         return false;
     }
 }
 
-async function loadLatestWorkflow() {
+async function restoreLatestWorkflow() {
     try {
         const workflows = await getWorkflows();
-
-        if (!workflows || workflows.length === 0) return;
-
-        const activeId = localStorage.getItem(
-            'flowforge-active-workflow'
-        );
-
-        let workflow = activeId
-            ? await getWorkflow(activeId)
-            : null;
-
-        if (!workflow) {
-            workflow = [...workflows].sort(
-                (a, b) => b.updatedAt - a.updatedAt
-            )[0];
-        }
-
-        if (workflow) {
-            await loadWorkflowById(workflow.id);
-        }
-
+        const activeId = localStorage.getItem('flowforge-active-workflow');
+        const active = activeId ? await getWorkflow(activeId) : null;
+        const workflow = active || workflows[0];
+        if (workflow) await loadWorkflowById(workflow.id);
+        else replaceWorkflowState({ nodes: [], connections: [] });
     } catch (error) {
         console.error('Unable to restore workflow:', error);
+        replaceWorkflowState({ nodes: [], connections: [] });
     }
+}
+
+export function waitForWorkflowRestore() {
+    return restorePromise;
 }
 
 export function exportWorkflow() {
     try {
         const workflow = createWorkflowData();
-
-        const blob = new Blob(
-            [JSON.stringify(workflow, null, 2)],
-            { type: 'application/json' }
-        );
-
+        const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-
         const link = document.createElement('a');
-
         link.href = url;
-        link.download = `${workflow.name.replace(/[^a-z0-9-_]/gi, '_')}.json`;
-
+        link.download = `${workflow.name.replace(/[^a-z0-9-_]/gi, '_') || 'workflow'}.json`;
         document.body.appendChild(link);
         link.click();
         link.remove();
-
-        URL.revokeObjectURL(url);
-
-        notify('Workflow exported successfully!');
-
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        notify('Workflow exported successfully.');
     } catch (error) {
         console.error('Export failed:', error);
         notify('Unable to export workflow.');
     }
 }
 
+export function validateWorkflow(workflow) {
+    if (!workflow || typeof workflow !== 'object' ||
+        !Array.isArray(workflow.nodes) || !Array.isArray(workflow.connections)) {
+        throw new Error('Invalid workflow file structure.');
+    }
+
+    const ids = new Set();
+    for (const node of workflow.nodes) {
+        if (!node || typeof node.id !== 'string' || !node.id.trim() ||
+            typeof node.type !== 'string' || !node.type.trim() ||
+            !Number.isFinite(Number(node.x)) || !Number.isFinite(Number(node.y)) ||
+            !node.config || typeof node.config !== 'object' || Array.isArray(node.config)) {
+            throw new Error('Workflow contains an invalid node.');
+        }
+        if (ids.has(node.id)) throw new Error('Workflow contains duplicate node IDs.');
+        ids.add(node.id);
+    }
+
+    const edges = new Set();
+    for (const connection of workflow.connections) {
+        if (!connection || !ids.has(connection.from) || !ids.has(connection.to) ||
+            connection.from === connection.to) {
+            throw new Error('Workflow contains an invalid connection.');
+        }
+        const key = `${connection.from}->${connection.to}`;
+        if (edges.has(key)) throw new Error('Workflow contains duplicate connections.');
+        edges.add(key);
+    }
+    return true;
+}
+
 async function importWorkflow(file) {
     try {
-        const text = await file.text();
-        const workflow = JSON.parse(text);
-
-        if (
-            !workflow ||
-            !Array.isArray(workflow.nodes) ||
-            !Array.isArray(workflow.connections)
-        ) {
-            throw new Error('Invalid workflow file structure.');
-        }
-
-        const nodeIds = new Set(
-            workflow.nodes.map(node => node.id)
-        );
-
-        const validConnections = workflow.connections.filter(
-            connection =>
-                nodeIds.has(connection.from) &&
-                nodeIds.has(connection.to)
-        );
+        if (!file || file.size > 5 * 1024 * 1024) throw new Error('Workflow file must be smaller than 5 MB.');
+        const workflow = JSON.parse(await file.text());
+        validateWorkflow(workflow);
 
         state.workflowId = crypto.randomUUID();
-        state.workflowName = workflow.name || 'Imported Workflow';
+        state.workflowName = String(workflow.name || 'Imported Workflow').slice(0, 100);
         state.createdAt = Date.now();
-
-        state.nodes = workflow.nodes.map(node => ({
-            ...node,
-            config: node.config || {}
-        }));
-
-        state.connections = validConnections.map(connection => ({
-            ...connection,
-            id: crypto.randomUUID()
-        }));
-
-        state.history = [];
-        state.historyIndex = -1;
-
-        document.dispatchEvent(
-            new CustomEvent('flowforge:workflow-loaded', {
-                detail: workflow
-            })
-        );
-
+        replaceWorkflowState({
+            nodes: workflow.nodes.map(node => ({
+                ...node,
+                x: Number(node.x),
+                y: Number(node.y),
+                config: structuredClone(node.config)
+            })),
+            connections: workflow.connections.map(connection => ({
+                ...connection,
+                id: crypto.randomUUID()
+            }))
+        });
+        document.dispatchEvent(new CustomEvent('flowforge:workflow-loaded', { detail: workflow }));
         await saveCurrentWorkflow(false);
-
-        notify('Workflow imported successfully!');
-
+        notify('Workflow imported successfully.');
     } catch (error) {
         console.error('Import failed:', error);
-        notify('Invalid workflow JSON file.');
+        notify(error instanceof SyntaxError ? 'The selected file is not valid JSON.' : error.message || 'Unable to import workflow.');
     }
 }
 
 export function initializePersistence(showNotification) {
     notificationCallback = showNotification;
+    restorePromise = restoreLatestWorkflow();
 
-    document.addEventListener(
-        'flowforge:state-changed',
-        scheduleAutoSave
-    );
+    document.addEventListener('flowforge:state-changed', scheduleAutoSave);
 
     document.addEventListener('click', event => {
-
-        if (event.target.closest('#save-workflow')) {
-            saveCurrentWorkflow();
-        }
-
-        if (event.target.closest('#export-workflow')) {
-            exportWorkflow();
-        }
-
-        if (event.target.closest('#import-workflow')) {
-            document.getElementById('workflow-file')?.click();
-        }
+        if (event.target.closest('#save-workflow')) saveCurrentWorkflow();
+        if (event.target.closest('#export-workflow')) exportWorkflow();
+        if (event.target.closest('#import-workflow')) document.getElementById('workflow-file')?.click();
     });
 
     document.addEventListener('change', event => {
-
         if (event.target.id === 'workflow-name') {
-            state.workflowName =
-                event.target.value.trim() || 'Untitled Workflow';
-
+            state.workflowName = event.target.value.trim() || 'Untitled Workflow';
             scheduleAutoSave();
         }
-
         if (event.target.id === 'workflow-file') {
             const file = event.target.files?.[0];
-
-            if (file) {
-                importWorkflow(file);
-            }
-
+            if (file) importWorkflow(file);
             event.target.value = '';
         }
     });
-
-    loadLatestWorkflow();
 }
