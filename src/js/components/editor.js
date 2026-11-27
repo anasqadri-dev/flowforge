@@ -2,6 +2,7 @@ import { state, replaceWorkflowState } from '../core/state.js';
 
 let editor = null;
 let importing = false;
+const drawflowToAppId = new Map();
 
 const nodePorts = {
     'Manual Start': { inputs: 0, outputs: 1 },
@@ -44,7 +45,11 @@ export function getNodePortCounts(type) {
 
 export function getAppNodeId(drawflowId) {
     const node = editor?.getNodeFromId(drawflowId);
-    return node?.data?.appNodeId || null;
+    return node?.data?.appNodeId || drawflowToAppId.get(String(drawflowId)) || null;
+}
+
+export function registerDrawflowNode(drawflowId, appNodeId) {
+    drawflowToAppId.set(String(drawflowId), appNodeId);
 }
 
 export function exportStateToDrawflow() {
@@ -110,8 +115,14 @@ export function syncStateFromDrawflow() {
 export function renderDrawflowFromState() {
     if (!editor) return;
     importing = true;
-    try { editor.import(exportStateToDrawflow()); }
-    finally { importing = false; }
+    try {
+        const exported = exportStateToDrawflow();
+        editor.import(exported);
+        drawflowToAppId.clear();
+        Object.values(exported.drawflow.Home.data).forEach(node => {
+            drawflowToAppId.set(String(node.id), node.data.appNodeId);
+        });
+    } finally { importing = false; }
 }
 
 export function initDrawflow(containerId = 'drawflow-container') {
