@@ -832,3 +832,41 @@ textarea:focus-visible, select:focus-visible {
         min-height: 560px;
     }
 }
+
+
+/* ===== SIDEBAR VISUAL REFINEMENT ===== */
+.sidebar nav a {
+    min-height: 50px;
+    padding: 12px 14px;
+    gap: 12px;
+    border-radius: 12px;
+    line-height: 1.2;
+}
+
+.sidebar nav a [data-lucide] {
+    width: 20px;
+    height: 20px;
+}
+
+#theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 70px;
+    margin-top: auto;
+    padding: 14px 16px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    line-height: 1.2;
+}
+
+#theme-toggle [data-lucide] {
+    width: 20px;
+    height: 20px;
+}
+
+#theme-toggle:hover {
+    border-color: var(--color-border);
+}
