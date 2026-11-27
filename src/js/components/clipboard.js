@@ -3,7 +3,8 @@ let clipboard = null;
 
 export function copySelectedNode(editor) {
     if (!editor?.node_selected) return false;
-    const id = editor.node_selected.id;
+    const selectedId = editor.node_selected.id;
+    const id = String(selectedId).replace(/^node-/, '');
     const node = editor.getNodeFromId(id);
     if (!node?.data) return false;
     clipboard = {
