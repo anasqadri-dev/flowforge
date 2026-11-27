@@ -1,39 +1,47 @@
-// src/js/core/theme.js
-const THEME_STORAGE_KEY = "theme";
+import { getSetting, saveSetting } from './database.js';
+
+const THEME_STORAGE_KEY = 'theme';
 
 function applyTheme(theme) {
-    if (theme === "dark") {
-        document.body.classList.add("dark");
-    } else {
-        document.body.classList.remove("dark");
+    const normalized = theme === 'dark' ? 'dark' : 'light';
+    document.body.classList.toggle('dark', normalized === 'dark');
+    localStorage.setItem(THEME_STORAGE_KEY, normalized);
+
+    const icon = document.querySelector('#theme-toggle [data-lucide]');
+    if (icon) {
+        icon.setAttribute('data-lucide', normalized === 'dark' ? 'sun' : 'moon');
+        window.lucide?.createIcons?.();
     }
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 
-export function initializeTheme() {
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || "light";
+export async function setTheme(theme, persist = true) {
+    const normalized = theme === 'dark' ? 'dark' : 'light';
+    applyTheme(normalized);
+    if (persist) {
+        try {
+            await saveSetting('theme', normalized);
+        } catch (error) {
+            console.error('Unable to persist theme preference:', error);
+        }
+    }
+    return normalized;
+}
+
+export async function initializeTheme() {
+    let savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'light';
+    try {
+        const databaseTheme = await getSetting('theme');
+        if (databaseTheme === 'dark' || databaseTheme === 'light') savedTheme = databaseTheme;
+    } catch (error) {
+        console.warn('Using local theme preference because database settings could not be read.', error);
+    }
     applyTheme(savedTheme);
 
-    // Button ko dhoondne ke liye thoda wait karo
-    setTimeout(() => {
-        const themeToggle = document.getElementById("theme-toggle");
-        
-        if (!themeToggle) {
-            console.warn("⚠️ Theme toggle button was not found in the DOM.");
-            return;
-        }
+    const themeToggle = document.getElementById('theme-toggle');
+    if (!themeToggle) return;
 
-        // Button ko clone karo taake purane events clear ho jayein
-        const newToggle = themeToggle.cloneNode(true);
-        if (themeToggle.parentNode) {
-            themeToggle.parentNode.replaceChild(newToggle, themeToggle);
-        }
-
-        newToggle.addEventListener("click", () => {
-            const isDark = document.body.classList.contains("dark");
-            const newTheme = isDark ? "light" : "dark";
-            applyTheme(newTheme);
-            console.log("✅ Theme changed to:", newTheme); 
-        });
-    }, 100);
+    themeToggle.addEventListener('click', () => {
+        const nextTheme = document.body.classList.contains('dark') ? 'light' : 'dark';
+        setTheme(nextTheme);
+    });
 }
