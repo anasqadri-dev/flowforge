@@ -1,20 +1,21 @@
 import { getDrawflowEditor } from './editor.js';
 import { renderSettingsPanel } from './settings-panel.js';
+import { refreshIcons } from '../core/icons.js';
 
 function getNodeHtml(type) {
   const iconMap = {
-    'Manual Start': '▶',
-    'Timer': '⏱',
-    'HTTP Request': '🌐',
-    'Transform Data': '⚙',
-    'Set Variable': '📝',
-    'Wait': '⏳',
-    'Condition': '🔀',
-    'Loop': '🔁',
-    'Send Notification': '🔔',
-    'Write to Log': '📄'
+    'Manual Start': '<i data-lucide="play" aria-hidden="true"></i>',
+    'Timer': '<i data-lucide="clock" aria-hidden="true"></i>',
+    'HTTP Request': '<i data-lucide="globe" aria-hidden="true"></i>',
+    'Transform Data': '<i data-lucide="sliders-horizontal" aria-hidden="true"></i>',
+    'Set Variable': '<i data-lucide="variable" aria-hidden="true"></i>',
+    'Wait': '<i data-lucide="timer" aria-hidden="true"></i>',
+    'Condition': '<i data-lucide="git-branch" aria-hidden="true"></i>',
+    'Loop': '<i data-lucide="repeat" aria-hidden="true"></i>',
+    'Send Notification': '<i data-lucide="bell" aria-hidden="true"></i>',
+    'Write to Log': '<i data-lucide="file-text" aria-hidden="true"></i>'
   };
-  const icon = iconMap[type] || '⚙';
+  const icon = iconMap[type] || '<i data-lucide="settings" aria-hidden="true"></i>';
   return `<div class="drawflow-node-inner"><span class="icon">${icon}</span> ${type}</div>`;
 }
 
@@ -86,6 +87,7 @@ export function initNodes() {
       { nodeType: nodeType },
       getNodeHtml(nodeType)
     );
+    refreshIcons(container);
   });
 
   editor.on('nodeSelected', (id) => {
