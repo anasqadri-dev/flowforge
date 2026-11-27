@@ -4,6 +4,7 @@
 import { renderSettingsPanel } from './settings-panel.js';
 import { state } from '../core/state.js';
 import { runWorkflow } from '../core/engine.js';
+import { refreshIcons } from '../core/icons.js';
 
 function initializeRunButton() {
   const runButton = document.getElementById('run-workflow');
@@ -14,7 +15,8 @@ function initializeRunButton() {
     if (runButton.disabled) return;
 
     runButton.disabled = true;
-    runButton.textContent = '⏳ Running...';
+    runButton.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i> Running...';
+    refreshIcons(runButton);
 
     try {
       console.log('Starting workflow execution...');
@@ -69,7 +71,8 @@ function initializeRunButton() {
       console.error('Workflow execution failed:', error);
     } finally {
       runButton.disabled = false;
-      runButton.textContent = '▶ Run Workflow';
+      runButton.innerHTML = '<i data-lucide="play" aria-hidden="true"></i> Run Workflow';
+      refreshIcons(runButton);
     }
   });
 }
@@ -87,25 +90,25 @@ let keyboardHandlerAttached = false;
 
 function getBoxName(text) {
   return text
-    .replace(/[▶🌐⚙📝⏳🔀🔁🔔📄⏱]/gu, '')
+    .replace(/^[^\p{L}\p{N}]*/u, '')
     .trim();
 }
 
 function getIcon(boxName) {
   const name = boxName.toLowerCase();
 
-  if (name.includes('http')) return '🌐';
-  if (name.includes('wait')) return '⏳';
-  if (name.includes('condition')) return '🔀';
-  if (name.includes('start')) return '▶';
-  if (name.includes('timer')) return '⏱';
-  if (name.includes('notification')) return '🔔';
-  if (name.includes('variable')) return '📝';
-  if (name.includes('loop')) return '🔁';
-  if (name.includes('transform')) return '⚙';
-  if (name.includes('log')) return '📄';
+  if (name.includes('http')) return 'globe';
+  if (name.includes('wait')) return 'timer';
+  if (name.includes('condition')) return 'git-branch';
+  if (name.includes('start')) return 'play';
+  if (name.includes('timer')) return 'clock';
+  if (name.includes('notification')) return 'bell';
+  if (name.includes('variable')) return 'variable';
+  if (name.includes('loop')) return 'repeat';
+  if (name.includes('transform')) return 'sliders-horizontal';
+  if (name.includes('log')) return 'file-text';
 
-  return '⚙';
+  return 'settings';
 }
 
 function getConfig(node) {
@@ -487,7 +490,7 @@ function createNode(
 );
 
   node.innerHTML = `
-    <span class="icon">${icon}</span>
+    <span class="icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>
 
     <span class="node-text">${boxName}</span>
 
@@ -507,6 +510,7 @@ function createNode(
   node.style.top = `${y}px`;
 
   canvas.appendChild(node);
+  refreshIcons(node);
 
   // Store node in central application state.
   if (!savedNode) {
