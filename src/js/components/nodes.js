@@ -49,7 +49,7 @@ function openSettings(drawflowId) {
         }
         if (type === 'Wait') {
             const seconds = Number(values['wait-time']);
-            if (!Number.isFinite(seconds) || seconds < 0) return showNotification('Wait duration must be a non-negative number.');
+            if (!Number.isFinite(seconds) || seconds < 0 || seconds > 60) return showNotification('Wait duration must be between 0 and 60 seconds.');
             values.seconds = seconds; delete values['wait-time'];
         }
         if (type === 'Loop') {
@@ -191,11 +191,13 @@ function initializeRunButton() {
     });
 }
 
-function initializeKeyboardShortcuts(editor) {
+function initializeKeyboardShortcuts() {
     if (keyboardHandlerAttached) return;
     keyboardHandlerAttached = true;
     document.addEventListener('keydown', event => {
         if (event.target.matches('input, textarea, select, button') || event.target.isContentEditable) return;
+        const editor = getDrawflowEditor();
+        if (!editor) return;
         const modifier = event.ctrlKey || event.metaKey;
         if (modifier && event.key.toLowerCase() === 'z') {
             event.preventDefault();
@@ -251,7 +253,7 @@ export function initNodes() {
         refreshIcons(container);
     });
     setupDrawflowEvents(editor);
-    initializeKeyboardShortcuts(editor);
+    initializeKeyboardShortcuts();
     initializeRunButton();
     if (!window.__flowforgeDrawflowSyncBound) {
         document.addEventListener('flowforge:state-changed', () => {
