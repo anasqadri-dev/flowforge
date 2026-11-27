@@ -1,4 +1,4 @@
-import { state } from '../core/state.js';
+import { state, replaceWorkflowState } from '../core/state.js';
 import { saveSetting, getSetting } from '../core/database.js';
 import { saveCurrentWorkflow } from '../core/persistence.js';
 import { showNotification } from '../components/notifications.js';
@@ -225,10 +225,10 @@ export async function renderTemplatesPage(container) {
       state.workflowName = template.name;
       state.createdAt = new Date().toISOString();
 
-      state.nodes = structuredClone(template.nodes);
-      state.connections = structuredClone(template.connections);
-
-      state.selectedNodeId = null;
+      replaceWorkflowState({
+        nodes: structuredClone(template.nodes),
+        connections: structuredClone(template.connections)
+      });
 
       document.dispatchEvent(
         new CustomEvent('flowforge:workflow-loaded', {
