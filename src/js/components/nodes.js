@@ -755,4 +755,5 @@ export function initNodes() {
 }
 
 renderSavedWorkflow();
+  initializeRunButton();
 }
