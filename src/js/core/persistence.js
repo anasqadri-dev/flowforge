@@ -116,7 +116,7 @@ export function exportWorkflow() {
     }
 }
 
-export function validateWorkflow(workflow) {
+export function validateWorkflow(workflow, { requireStart = false } = {}) {
     if (!workflow || typeof workflow !== 'object' ||
         !Array.isArray(workflow.nodes) || !Array.isArray(workflow.connections)) {
         throw new Error('Invalid workflow file structure.');
@@ -147,7 +147,9 @@ export function validateWorkflow(workflow) {
         edges.add(key);
     }
     const starts = workflow.nodes.filter(node => ['Manual Start', 'Timer (Schedule)'].includes(node.type));
-    if (starts.length !== 1) throw new Error('Workflow must contain exactly one start node.');
+    if (starts.length > 1 || (requireStart && starts.length !== 1)) {
+        throw new Error('Workflow must contain exactly one start node.');
+    }
     const indegree = new Map(workflow.nodes.map(node => [node.id, 0]));
     const adjacency = new Map(workflow.nodes.map(node => [node.id, []]));
     workflow.connections.forEach(edge => { adjacency.get(edge.from).push(edge.to); indegree.set(edge.to, indegree.get(edge.to) + 1); });
@@ -162,7 +164,7 @@ async function importWorkflow(file) {
     try {
         if (!file || file.size > 5 * 1024 * 1024) throw new Error('Workflow file must be smaller than 5 MB.');
         const workflow = JSON.parse(await file.text());
-        validateWorkflow(workflow);
+        validateWorkflow(workflow, { requireStart: true });
 
         state.workflowId = crypto.randomUUID();
         state.workflowName = String(workflow.name || 'Imported Workflow').slice(0, 100);
