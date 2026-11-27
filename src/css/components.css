@@ -824,3 +824,11 @@ textarea:focus-visible, select:focus-visible {
     font-size: 12px;
     margin-top: 4px;
 }
+
+
+@media (min-width: 1101px) {
+    .builder-container {
+        height: calc(100vh - 104px);
+        min-height: 560px;
+    }
+}
