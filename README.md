@@ -146,7 +146,7 @@ To maintain a clean and collaborative codebase:
 
 - Develop a functional visual workflow editor.
 - Implement a browser-based workflow execution engine.
-- Support configurable workflow actions and conditions.
+- Support configurable workflow actions, conditional paths, and bounded loop bodies.
 - Provide reliable local persistence.
 - Maintain a responsive and accessible user interface.
 - Demonstrate practical Web Engineering concepts.
