@@ -93,9 +93,9 @@ function renderRunList(runs) {
         <article class="run-card">
 
             <div class="run-card-info">
-                <h3>Workflow Execution</h3>
+                <h3>${escapeHTML(run.workflowName || 'Workflow Execution')}</h3>
 
-                <p>${formatDate(run.startedAt)}</p>
+                <p>${formatDate(run.startedAt)}</p><p class="run-workflow-id">${run.workflowId ? `Workflow ID: ${escapeHTML(run.workflowId)}` : 'Unsaved workflow'}</p>
 
                 <p>
                     Duration: ${run.duration} ms
