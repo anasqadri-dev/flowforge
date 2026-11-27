@@ -779,3 +779,48 @@ textarea:focus-visible, select:focus-visible {
     .template-grid { grid-template-columns: 1fr; }
     .page-heading { align-items: flex-start; }
 }
+
+
+/* Loop body configuration */
+.field-help {
+    color: var(--color-text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+.loop-node-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 190px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-secondary);
+}
+.loop-node-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--color-text-primary) !important;
+    font-size: 13px;
+    cursor: pointer;
+}
+.loop-node-option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    margin: 0;
+    accent-color: var(--color-primary);
+}
+.dashboard-run-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+.dashboard-run-item p {
+    color: var(--color-text-muted);
+    font-size: 12px;
+    margin-top: 4px;
+}
