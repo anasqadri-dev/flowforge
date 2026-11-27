@@ -184,7 +184,7 @@ export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) 
       break;
 
     case 'Loop': {
-      const candidates = state.nodes.filter(node => node.id !== currentNodeId);
+      const candidates = state.nodes.filter(node => node.id !== currentNodeId && !['Manual Start', 'Timer (Schedule)', 'Loop'].includes(node.type));
       const selectedIds = Array.isArray(config.bodyNodeIds) ? config.bodyNodeIds : [];
       formFields = `
         ${inputField(
