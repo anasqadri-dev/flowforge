@@ -5,6 +5,7 @@ import { renderSettingsPage } from '../pages/settings.js';
 import { initNodes } from '../components/nodes.js';
 import { refreshIcons } from './icons.js';
 import { waitForWorkflowRestore } from './persistence.js';
+import { getWorkflows, getRuns } from './database.js';
 
 function renderDashboard() {
     return `
@@ -12,7 +13,7 @@ function renderDashboard() {
         <section class="stats-grid">
             <article class="stat-card"><h3 id="stat-workflows">0</h3><p>Workflows</p></article>
             <article class="stat-card"><h3 id="stat-runs">0</h3><p>Total Runs</p></article>
-            <article class="stat-card"><h3 id="stat-success">—</h3><p>Success Rate</p></article>
+            <article class="stat-card"><h3 id="stat-success">0%</h3><p>Success Rate</p></article>
         </section>
         <section class="quick-actions">
             <a href="#builder" class="btn-primary"><i data-lucide="plus" aria-hidden="true"></i> New Workflow</a>
@@ -23,6 +24,34 @@ function renderDashboard() {
             <ul id="recent-runs" class="run-list"><li class="empty">No runs yet. Create a workflow to get started.</li></ul>
         </section>
     `;
+}
+
+function escapeHTML(value = '') {
+    return String(value).replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[char]);
+}
+
+async function loadDashboardData() {
+    const [workflows, runs] = await Promise.all([getWorkflows(), getRuns()]);
+    const workflowCount = document.getElementById('stat-workflows');
+    const runCount = document.getElementById('stat-runs');
+    const successRate = document.getElementById('stat-success');
+    if (!workflowCount) return;
+    workflowCount.textContent = workflows.length;
+    runCount.textContent = runs.length;
+    const successful = runs.filter(run => run.status === 'success').length;
+    successRate.textContent = runs.length ? `${Math.round(successful / runs.length * 100)}%` : '0%';
+
+    const recent = document.getElementById('recent-runs');
+    if (!recent) return;
+    recent.innerHTML = runs.slice(0, 5).map(run => `
+        <li class="dashboard-run-item">
+            <div><strong>${escapeHTML(run.workflowName || 'Workflow Execution')}</strong>
+            <p>${new Date(run.startedAt).toLocaleString()}</p></div>
+            <span class="run-status ${run.status}">${escapeHTML(run.status.toUpperCase())}</span>
+        </li>
+    `).join('') || '<li class="empty">No runs yet. Create a workflow to get started.</li>';
 }
 
 export function initializeNavigation(showNotification) {
@@ -41,6 +70,7 @@ export function initializeNavigation(showNotification) {
             switch (route) {
                 case '#dashboard':
                     content.innerHTML = renderDashboard();
+                    loadDashboardData().catch(error => console.error('Dashboard data could not be loaded:', error));
                     break;
                 case '#builder':
                     content.innerHTML = renderBuilder();
