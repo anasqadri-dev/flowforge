@@ -219,12 +219,20 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
                 for (const id of bodySet) {
                     if (!graph.nodeMap.has(id)) throw new Error('Loop body references a node that no longer exists.');
                     if (executed.has(id)) throw new Error('A Loop body node has already executed before the Loop.');
+                    const incomingOutside = (graph.reverse.get(id) || []).filter(edge => !bodySet.has(edge.from));
+                    if (id !== bodyNodeIds[0] && incomingOutside.length) {
+                        throw new Error('Only the first selected Loop body node may receive a connection from outside the body.');
+                    }
                 }
 
                 const bodyIncoming = new Map([...bodySet].map(id => [id, []]));
                 const bodyOutgoing = new Map([...bodySet].map(id => [id, []]));
                 for (const id of bodySet) {
-                    for (const edge of graph.adjacency.get(id) || []) {
+                    const allOutgoing = graph.adjacency.get(id) || [];
+                    if (allOutgoing.length > 1) {
+                        throw new Error('Loop body nodes cannot have multiple outgoing connections.');
+                    }
+                    for (const edge of allOutgoing) {
                         if (bodySet.has(edge.to)) bodyOutgoing.get(id).push(edge.to);
                     }
                     for (const edge of graph.reverse.get(id) || []) {
