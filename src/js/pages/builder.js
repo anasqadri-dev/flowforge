@@ -34,7 +34,8 @@ export function renderBuilder() {
       </aside>
 
       <!-- Center: Canvas (M2) -->
-      <main class="canvas-area" id="drawflow-container">
+      <main class="canvas-area">
+        <div id="drawflow-container" aria-label="Workflow canvas"></div>
       <div class="workflow-toolbar">
     <input
         type="text"
