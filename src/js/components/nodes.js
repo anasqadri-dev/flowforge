@@ -365,16 +365,20 @@ function makeDraggable(node, canvas) {
   });
 }
 
-function drawConnection(source, target) {
+function drawConnection(
+    source,
+    target,
+    savedConnection = null
+) {
   const svg = document.getElementById('svg-layer');
 
   if (!svg || source === target) return;
 
   // Add connection to application state.
-  const connection = addConnection({
+  const connection = savedConnection || addConnection({
     from: source.dataset.nodeId,
     to: target.dataset.nodeId
-  });
+});
 
   if (!connection) return;
 
@@ -463,8 +467,14 @@ function initializeKeyboardShortcuts() {
   });
 }
 
-function createNode(boxName, canvas, x, y) {
-  const id = crypto.randomUUID();
+function createNode(
+    boxName,
+    canvas,
+    x,
+    y,
+    savedNode = null
+) {
+  const id = savedNode?.id || crypto.randomUUID();
   const icon = getIcon(boxName);
 
   const node = document.createElement('div');
@@ -472,7 +482,9 @@ function createNode(boxName, canvas, x, y) {
   node.className = 'canvas-node';
   node.dataset.nodeId = id;
   node.dataset.nodeType = boxName;
-  node.dataset.config = '{}';
+  node.dataset.config = JSON.stringify(
+    savedNode?.config || {}
+);
 
   node.innerHTML = `
     <span class="icon">${icon}</span>
@@ -497,13 +509,15 @@ function createNode(boxName, canvas, x, y) {
   canvas.appendChild(node);
 
   // Store node in central application state.
-  addNode({
-    id,
-    type: boxName,
-    x,
-    y,
-    config: {}
-  });
+  if (!savedNode) {
+    addNode({
+        id,
+        type: boxName,
+        x,
+        y,
+        config: {}
+    });
+}
 
   makeDraggable(node, canvas);
 
@@ -622,6 +636,61 @@ function createNode(boxName, canvas, x, y) {
   return node;
 }
 
+function renderSavedWorkflow() {
+    const canvas = document.getElementById('canvas');
+
+    if (!canvas) return;
+
+    // Remove existing nodes.
+    canvas.querySelectorAll('.canvas-node').forEach(node => {
+        node.remove();
+    });
+
+    // Remove existing connection paths.
+    document.querySelectorAll(
+        '#svg-layer path[data-connection-id]'
+    ).forEach(path => path.remove());
+
+    // Rebuild nodes.
+    state.nodes.forEach(savedNode => {
+        createNode(
+            savedNode.type,
+            canvas,
+            savedNode.x,
+            savedNode.y,
+            savedNode
+        );
+    });
+
+    // Rebuild connections.
+    state.connections.forEach(connection => {
+        const source = canvas.querySelector(
+            `[data-node-id="${connection.from}"]`
+        );
+
+        const target = canvas.querySelector(
+            `[data-node-id="${connection.to}"]`
+        );
+
+        if (source && target) {
+            drawConnection(source, target, connection);
+        }
+    });
+
+    const hint = canvas.querySelector('.canvas-hint');
+
+    if (hint) {
+        hint.style.display =
+            state.nodes.length ? 'none' : 'block';
+    }
+
+    const nameInput = document.getElementById('workflow-name');
+
+    if (nameInput) {
+        nameInput.value = state.workflowName;
+    }
+}
+
 export function initNodes() {
   const boxes = document.querySelectorAll('.box-item');
   const canvas = document.getElementById('canvas');
@@ -680,4 +749,14 @@ export function initNodes() {
 
     if (hint) hint.style.display = 'none';
   });
+  if (!window.__flowforgeRestoreListener) {
+    document.addEventListener(
+        'flowforge:workflow-loaded',
+        renderSavedWorkflow
+    );
+
+    window.__flowforgeRestoreListener = true;
+}
+
+renderSavedWorkflow();
 }

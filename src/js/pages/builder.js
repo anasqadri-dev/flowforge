@@ -35,6 +35,34 @@ export function renderBuilder() {
 
       <!-- Center: Canvas (M2) -->
       <main class="canvas-area" id="canvas">
+      <div class="workflow-toolbar">
+    <input
+        type="text"
+        id="workflow-name"
+        placeholder="Workflow name"
+        value="Untitled Workflow"
+        aria-label="Workflow name"
+    >
+
+    <button type="button" id="save-workflow">
+        Save
+    </button>
+
+    <button type="button" id="export-workflow">
+        Export JSON
+    </button>
+
+    <button type="button" id="import-workflow">
+        Import JSON
+    </button>
+
+    <input
+        type="file"
+        id="workflow-file"
+        accept=".json,application/json"
+        hidden
+    >
+</div>
       <button
   type="button"
   id="run-workflow"
