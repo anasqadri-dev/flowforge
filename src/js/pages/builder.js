@@ -1,7 +1,3 @@
-
-
-import { renderSettingsPanel } from '../components/settings-panel.js';
-
 export function renderBuilder() {
   return `
     <div class="builder-container">
@@ -39,6 +35,13 @@ export function renderBuilder() {
 
       <!-- Center: Canvas (M2) -->
       <main class="canvas-area" id="canvas">
+      <button
+  type="button"
+  id="run-workflow"
+  class="btn-primary run-workflow-btn"
+>
+  ▶ Run Workflow
+</button>
        <svg id="svg-layer" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 50;">
     <defs>
         <!-- arrowhead ko box ke upar dikhane ke liye refX set kiya hai -->

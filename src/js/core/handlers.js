@@ -1,0 +1,223 @@
+
+function interpolate(value, context) {
+  if (typeof value !== "string") return value;
+
+  return value.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+    const cleanKey = key.trim();
+    const result = context[cleanKey];
+
+    if (result === undefined || result === null) return "";
+
+    return typeof result === "object"
+      ? JSON.stringify(result)
+      : String(result);
+  });
+}
+
+function compareValues(left, operator, right) {
+  const a = Number(left);
+  const b = Number(right);
+
+  const numeric =
+    String(left).trim() !== "" &&
+    String(right).trim() !== "" &&
+    Number.isFinite(a) &&
+    Number.isFinite(b);
+
+  const x = numeric ? a : String(left);
+  const y = numeric ? b : String(right);
+
+  switch (operator) {
+    case "==": return String(x) === String(y);
+    case "!=": return String(x) !== String(y);
+    case ">": return x > y;
+    case "<": return x < y;
+    case ">=": return x >= y;
+    case "<=": return x <= y;
+    default: throw new Error(`Unsupported operator: ${operator}`);
+  }
+}
+
+export const handlers = {
+  "Manual Start": async () => ({
+    startedAt: new Date().toISOString()
+  }),
+
+  "Timer (Schedule)": async (config) => {
+    if (!config.scheduleTime) {
+      throw new Error("Please configure the schedule date and time.");
+    }
+
+    const scheduledAt = new Date(config.scheduleTime);
+
+    if (Number.isNaN(scheduledAt.getTime())) {
+      throw new Error("Invalid schedule date.");
+    }
+
+    return {
+      scheduledAt: scheduledAt.toISOString()
+    };
+  },
+
+  "HTTP Request": async (config, context) => {
+    const url = interpolate(config.url || "", context);
+
+    if (!url) throw new Error("Request URL is missing.");
+
+    let parsedUrl;
+
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      throw new Error("Invalid request URL.");
+    }
+
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      throw new Error("Only HTTP and HTTPS URLs are supported.");
+    }
+
+    let headers = {};
+
+    try {
+      headers = config.headers
+        ? JSON.parse(interpolate(config.headers, context))
+        : {};
+    } catch {
+      throw new Error("Invalid HTTP headers JSON.");
+    }
+
+    const method = config.method || "GET";
+
+    const options = {
+      method,
+      headers
+    };
+
+    if (!["GET", "HEAD"].includes(method)) {
+      const body = interpolate(config.body || "", context);
+
+      if (body) {
+        options.body = body;
+
+        if (
+          !Object.keys(headers).some(
+            key => key.toLowerCase() === "content-type"
+          )
+        ) {
+          options.headers["Content-Type"] = "application/json";
+        }
+      }
+    }
+
+    const response = await fetch(url, options);
+    const responseText = await response.text();
+
+    let data = responseText;
+
+    try {
+      data = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      // Keep plain-text response.
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return {
+      status: response.status,
+      ok: response.ok,
+      data
+    };
+  },
+
+  "Transform Data": async (config, context) => ({
+    result: interpolate(config.input || "", context)
+  }),
+
+  "Set Variable": async (config, context) => {
+    const name = (config.name || "").trim();
+
+    if (!name) throw new Error("Variable name is required.");
+
+    const value = interpolate(config.value || "", context);
+
+    context[name] = value;
+
+    return {
+      name,
+      value
+    };
+  },
+
+  "Wait": async (config) => {
+    const seconds = Number(config.seconds);
+
+    if (!Number.isFinite(seconds) || seconds < 0 || seconds > 60) {
+      throw new Error("Wait must be between 0 and 60 seconds.");
+    }
+
+    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+
+    return {
+      waitedSeconds: seconds
+    };
+  },
+
+  "Condition": async (config, context) => {
+    const left = interpolate(config.left || "", context);
+    const right = interpolate(config.right || "", context);
+
+    return {
+      left,
+      operator: config.operator || "==",
+      right,
+      result: compareValues(
+        left,
+        config.operator || "==",
+        right
+      )
+    };
+  },
+
+  "Loop": async (config) => {
+    const count = Number(config.count);
+
+    if (!Number.isInteger(count) || count < 1 || count > 100) {
+      throw new Error("Loop count must be between 1 and 100.");
+    }
+
+    return {
+      iterations: count,
+      message: `Loop configured for ${count} iterations.`
+    };
+  },
+
+  "Send Notification": async (config, context) => {
+    const message = interpolate(
+      config.message || "Workflow notification",
+      context
+    );
+
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification("FlowForge", { body: message });
+      } else if (Notification.permission === "default") {
+        await Notification.requestPermission();
+      }
+    }
+
+    return { message };
+  },
+
+  "Write to Log": async (config, context) => {
+    const message = interpolate(
+      config.message || "",
+      context
+    );
+
+    console.log("[FlowForge]", message);
+
+    return { message };
+  }
+};

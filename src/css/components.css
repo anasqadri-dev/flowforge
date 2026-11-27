@@ -327,3 +327,21 @@
         max-height: 500px;
     }
 }
+
+
+/* ===== M5 WORKFLOW EXECUTION ===== */
+
+.run-workflow-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 200;
+    cursor: pointer;
+    border: none;
+    min-width: 145px;
+}
+
+.run-workflow-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}

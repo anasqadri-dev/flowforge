@@ -2,6 +2,77 @@
 // src/js/components/nodes.js
 
 import { renderSettingsPanel } from './settings-panel.js';
+import { state } from '../core/state.js';
+import { runWorkflow } from '../core/engine.js';
+
+function initializeRunButton() {
+  const runButton = document.getElementById('run-workflow');
+
+  if (!runButton) return;
+
+  runButton.addEventListener('click', async () => {
+    if (runButton.disabled) return;
+
+    runButton.disabled = true;
+    runButton.textContent = '⏳ Running...';
+
+    try {
+      console.log('Starting workflow execution...');
+
+      console.log('Nodes:', state.nodes);
+      console.log('Connections:', state.connections);
+
+      const result = await runWorkflow(
+        state.nodes,
+        state.connections
+      );
+
+      console.log('Workflow execution result:', result);
+
+      const notification = document.getElementById('notification');
+
+      if (notification) {
+        notification.textContent =
+          result.status === 'success'
+            ? `Workflow completed successfully in ${result.duration}ms!`
+            : `Workflow failed: ${result.error}`;
+
+        notification.classList.add('show');
+
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 3500);
+      }
+
+      // Highlight failed node if execution fails.
+      if (result.status === 'error' && result.steps.length) {
+        const failedStep = result.steps.find(
+          step => step.status === 'error'
+        );
+
+        if (failedStep) {
+          const failedNode = document.querySelector(
+            `[data-node-id="${failedStep.nodeId}"]`
+          );
+
+          failedNode?.classList.add('selected');
+        }
+      }
+
+      document.dispatchEvent(
+        new CustomEvent('flowforge:workflow-completed', {
+          detail: result
+        })
+      );
+
+    } catch (error) {
+      console.error('Workflow execution failed:', error);
+    } finally {
+      runButton.disabled = false;
+      runButton.textContent = '▶ Run Workflow';
+    }
+  });
+}
 
 import {
   addNode,
