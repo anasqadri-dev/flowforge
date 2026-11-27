@@ -1,6 +1,8 @@
 
 // src/js/components/settings-panel.js
 
+import { state } from '../core/state.js';
+
 function escapeHTML(value = '') {
   return String(value).replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
@@ -58,7 +60,7 @@ function textareaField(label, name, value = '', placeholder = '', required = tru
   `;
 }
 
-export function renderSettingsPanel(boxName, config = {}) {
+export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) {
   if (!boxName) return '';
 
   let formFields = '';
@@ -181,14 +183,31 @@ export function renderSettingsPanel(boxName, config = {}) {
       `;
       break;
 
-    case 'Loop':
-      formFields = inputField(
-        'Number of Iterations',
-        'loop-count',
-        config.count ?? 3,
-        'number'
-      );
+    case 'Loop': {
+      const candidates = state.nodes.filter(node => node.id !== currentNodeId);
+      const selectedIds = Array.isArray(config.bodyNodeIds) ? config.bodyNodeIds : [];
+      formFields = `
+        ${inputField(
+          'Number of Iterations',
+          'loop-count',
+          config.count ?? 3,
+          'number'
+        )}
+        <div class="form-group">
+          <label>Loop Body Nodes</label>
+          <p class="field-help">Select the action nodes that should run during each iteration. The selected nodes must form one connected path.</p>
+          <div class="loop-node-options">
+            ${candidates.map(node => `
+              <label class="loop-node-option">
+                <input type="checkbox" name="loop-body-node" value="${escapeHTML(node.id)}" ${selectedIds.includes(node.id) ? 'checked' : ''}>
+                <span>${escapeHTML(node.type)}</span>
+              </label>
+            `).join('') || '<p class="no-settings">Add action nodes before configuring a loop body.</p>'}
+          </div>
+        </div>
+      `;
       break;
+    }
 
     case 'Send Notification':
       formFields = textareaField(
