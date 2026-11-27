@@ -195,6 +195,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
             const outgoing = graph.adjacency.get(currentId) || [];
 
             if (node.type === 'Condition') {
+                if (outgoing.length > 2) throw new Error('A Condition can have at most two outgoing branches.');
                 const selected = chooseConditionEdge(outgoing, Boolean(output.result));
                 currentId = selected?.to || null;
                 continue;
@@ -219,10 +220,6 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
                 for (const id of bodySet) {
                     if (!graph.nodeMap.has(id)) throw new Error('Loop body references a node that no longer exists.');
                     if (executed.has(id)) throw new Error('A Loop body node has already executed before the Loop.');
-                    const incomingOutside = (graph.reverse.get(id) || []).filter(edge => !bodySet.has(edge.from));
-                    if (id !== bodyNodeIds[0] && incomingOutside.length) {
-                        throw new Error('Only the first selected Loop body node may receive a connection from outside the body.');
-                    }
                 }
 
                 const bodyIncoming = new Map([...bodySet].map(id => [id, []]));
@@ -245,6 +242,19 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
 
                 const bodyRoots = [...bodySet].filter(id => bodyIncoming.get(id).length === 0);
                 if (bodyRoots.length !== 1) throw new Error('Loop body must have exactly one starting node.');
+                for (const id of bodySet) {
+                    const incomingOutside = (graph.reverse.get(id) || []).filter(edge => !bodySet.has(edge.from));
+                    if (id === bodyRoots[0]) {
+                        if (incomingOutside.length !== 1 || incomingOutside[0].from !== node.id) {
+                            throw new Error('The Loop node must be the only external connection into the Loop body.');
+                        }
+                    } else if (incomingOutside.length) {
+                        throw new Error('Only the first Loop body node may receive a connection from outside the body.');
+                    }
+                }
+                if (outgoing.filter(edge => !bodySet.has(edge.to)).length > 1) {
+                    throw new Error('A Loop can have only one continuation connection.');
+                }
                 const bodyOrder = [];
                 let bodyCursor = bodyRoots[0];
                 while (bodyCursor && !bodyOrder.includes(bodyCursor)) {
