@@ -5,6 +5,7 @@ import { renderSettingsPanel } from './settings-panel.js';
 import { state } from '../core/state.js';
 import { runWorkflow } from '../core/engine.js';
 import { refreshIcons } from '../core/icons.js';
+import { showNotification } from './notifications.js';
 
 function initializeRunButton() {
   const runButton = document.getElementById('run-workflow');
@@ -19,32 +20,17 @@ function initializeRunButton() {
     refreshIcons(runButton);
 
     try {
-      console.log('Starting workflow execution...');
+      const result = await runWorkflow(state.nodes, state.connections, {}, {
+        workflowId: state.workflowId,
+        workflowName: state.workflowName
+      });
 
-      console.log('Nodes:', state.nodes);
-      console.log('Connections:', state.connections);
-
-      const result = await runWorkflow(
-        state.nodes,
-        state.connections
+      showNotification(
+        result.status === 'success'
+          ? `Workflow completed successfully in ${result.duration} ms.`
+          : `Workflow failed: ${result.error}`,
+        4000
       );
-
-      console.log('Workflow execution result:', result);
-
-      const notification = document.getElementById('notification');
-
-      if (notification) {
-        notification.textContent =
-          result.status === 'success'
-            ? `Workflow completed successfully in ${result.duration}ms!`
-            : `Workflow failed: ${result.error}`;
-
-        notification.classList.add('show');
-
-        setTimeout(() => {
-          notification.classList.remove('show');
-        }, 3500);
-      }
 
       // Highlight failed node if execution fails.
       if (result.status === 'error' && result.steps.length) {
@@ -327,7 +313,7 @@ function makeDraggable(node, canvas) {
   node.addEventListener('mousedown', (event) => {
     if (
       event.target.classList.contains('dot') ||
-      event.target.classList.contains('delete-btn')
+      event.target.closest('.delete-btn')
     ) {
       return;
     }
