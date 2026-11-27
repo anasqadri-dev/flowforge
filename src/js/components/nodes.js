@@ -4,7 +4,7 @@ import { runWorkflow } from '../core/engine.js';
 import { refreshIcons } from '../core/icons.js';
 import { showNotification } from './notifications.js';
 import { getSetting } from '../core/database.js';
-import { getDrawflowEditor, initDrawflow, getNodePortCounts, createDrawflowNodeHtml, getAppNodeId, renderDrawflowFromState, syncStateFromDrawflow, isImportingDrawflow } from './editor.js';
+import { getDrawflowEditor, initDrawflow, getNodePortCounts, createDrawflowNodeHtml, getAppNodeId, registerDrawflowNode, renderDrawflowFromState, isImportingDrawflow } from './editor.js';
 import { copySelectedNode, pasteNode } from './clipboard.js';
 
 let keyboardHandlerAttached = false;
@@ -91,6 +91,7 @@ function setupDrawflowEvents(editor) {
         const type = node.data?.nodeType || node.name;
         const appId = node.data?.appNodeId || crypto.randomUUID();
         node.data = { ...node.data, appNodeId: appId, nodeType: type, config: node.data?.config || {} };
+        registerDrawflowNode(id, appId);
         syncingFromEditor = true;
         addNode({ id: appId, type, x: node.pos_x, y: node.pos_y, config: node.data.config });
         syncingFromEditor = false;
@@ -252,10 +253,13 @@ export function initNodes() {
     setupDrawflowEvents(editor);
     initializeKeyboardShortcuts(editor);
     initializeRunButton();
-    document.addEventListener('flowforge:state-changed', () => {
-        if (!syncingFromEditor) renderDrawflowFromState();
-    });
-    document.addEventListener('flowforge:workflow-loaded', () => renderDrawflowFromState());
+    if (!window.__flowforgeDrawflowSyncBound) {
+        document.addEventListener('flowforge:state-changed', () => {
+            if (!syncingFromEditor) renderDrawflowFromState();
+        });
+        document.addEventListener('flowforge:workflow-loaded', () => renderDrawflowFromState());
+        window.__flowforgeDrawflowSyncBound = true;
+    }
     const name = document.getElementById('workflow-name');
     if (name) name.value = state.workflowName || 'Untitled Workflow';
     refreshIcons(container);
