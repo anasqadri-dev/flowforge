@@ -67,6 +67,7 @@ export const handlers = {
         }
 
         const method = String(config.method || 'GET').toUpperCase();
+        if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) throw new Error('Unsupported HTTP method.');
         const options = { method, headers };
         if (!['GET', 'HEAD'].includes(method)) {
             const body = interpolate(config.body || '', context);
@@ -81,16 +82,16 @@ export const handlers = {
         options.signal = controller.signal;
         const timeoutId = setTimeout(() => controller.abort(), timeout * 1000);
         let response;
+        let responseText;
         try {
             response = await fetch(url, options);
+            responseText = await response.text();
         } catch (error) {
             if (error.name === 'AbortError') throw new Error(`HTTP request timed out after ${timeout} seconds.`);
             throw error;
         } finally {
             clearTimeout(timeoutId);
         }
-
-        const responseText = await response.text();
         let data = responseText;
         try { data = responseText ? JSON.parse(responseText) : null; } catch { /* Keep plain text. */ }
         if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -102,6 +103,7 @@ export const handlers = {
     'Set Variable': async (config, context) => {
         const name = (config.name || '').trim();
         if (!name) throw new Error('Variable name is required.');
+        if (['__proto__', 'prototype', 'constructor'].includes(name)) throw new Error('This variable name is reserved.');
         const value = interpolate(config.value || '', context);
         context[name] = value;
         return { name, value };
