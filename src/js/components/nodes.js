@@ -216,7 +216,7 @@ function initializeKeyboardShortcuts(editor) {
             const selected = editor.node_selected;
             if (selected) {
                 event.preventDefault();
-                editor.removeNodeId('node-' + selected.id);
+                editor.removeNodeId(String(selected.id).startsWith('node-') ? selected.id : 'node-' + selected.id);
             }
         }
     });
