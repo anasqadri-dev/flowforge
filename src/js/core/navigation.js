@@ -4,6 +4,7 @@ import { renderTemplatesPage } from '../pages/templates.js';
 import { renderSettingsPage } from '../pages/settings.js';
 import { initNodes } from '../components/nodes.js';
 import { refreshIcons } from './icons.js';
+import { waitForWorkflowRestore } from './persistence.js';
 
 function renderDashboard() {
     return `
@@ -25,38 +26,45 @@ function renderDashboard() {
 }
 
 export function initializeNavigation(showNotification) {
+    let routeRequest = 0;
+
     async function handleRoute() {
+        const requestId = ++routeRequest;
         const route = window.location.hash || '#dashboard';
         const content = document.querySelector('.content');
         if (!content) return;
 
         try {
+            if (route === '#builder') await waitForWorkflowRestore();
+            if (requestId !== routeRequest) return;
+
             switch (route) {
                 case '#dashboard':
                     content.innerHTML = renderDashboard();
-                    refreshIcons();
                     break;
                 case '#builder':
                     content.innerHTML = renderBuilder();
-                    refreshIcons();
-                    requestAnimationFrame(() => initNodes());
+                    requestAnimationFrame(() => {
+                        if (requestId === routeRequest) initNodes();
+                    });
                     break;
                 case '#runs':
                     content.innerHTML = renderRuns();
-                    refreshIcons();
-                    requestAnimationFrame(() => initRuns());
+                    requestAnimationFrame(() => {
+                        if (requestId === routeRequest) initRuns();
+                    });
                     break;
                 case '#templates':
                     await renderTemplatesPage(content);
-                    refreshIcons();
                     break;
                 case '#settings':
                     await renderSettingsPage(content);
-                    refreshIcons();
                     break;
                 default:
                     window.location.hash = '#dashboard';
+                    return;
             }
+            if (requestId === routeRequest) refreshIcons();
         } catch (error) {
             console.error('Navigation failed:', error);
             showNotification('Unable to open this page. Check the browser console for details.');
