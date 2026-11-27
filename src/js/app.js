@@ -1,35 +1,44 @@
-// src/js/app.js
-import { showNotification } from "./components/notifications.js";
-import { initializeSidebar } from "./components/sidebar.js";
-import { initializeTheme } from "./core/theme.js";
-import { initializeNavigation } from "./core/navigation.js";
+import { initializePersistence } from './core/persistence.js';
+import { saveRun } from './core/database.js';
+import { showNotification } from './components/notifications.js';
+import { initializeSidebar } from './components/sidebar.js';
+import { initializeTheme } from './core/theme.js';
+import { initializeNavigation } from './core/navigation.js';
+import { state, initializeHistory } from './core/state.js';
 
 function initializeApp() {
-  console.log("Initializing FlowForge...");
+    console.info('Initializing FlowForge.');
+    initializeHistory();
 
-  try {
-    initializeTheme(); 
-    console.log("✅ Theme init called");
-  } catch (err) {
-    console.error("❌ Theme failed:", err);
-  }
+    initializeTheme().catch(error => console.error('Theme initialization failed:', error));
 
-  try {
-    initializeSidebar();
-  } catch (err) {
-    console.error("❌ Sidebar failed:", err);
-  }
+    try {
+        initializeSidebar();
+        initializePersistence(showNotification);
+        initializeNavigation(showNotification);
+    } catch (error) {
+        console.error('Application initialization failed:', error);
+        showNotification('FlowForge could not initialize correctly.');
+    }
 
-  try {
-    initializeNavigation(showNotification);
-  } catch (err) {
-    console.error("❌ Navigation failed:", err);
-  }
+    document.addEventListener('flowforge:workflow-completed', async event => {
+        try {
+            const run = {
+                ...event.detail,
+                workflowId: state.workflowId,
+                workflowName: state.workflowName || 'Untitled Workflow'
+            };
+            await saveRun(run);
+            document.dispatchEvent(new CustomEvent('flowforge:run-saved', { detail: run }));
+        } catch (error) {
+            console.error('Failed to save run history:', error);
+            showNotification('The workflow ran, but its history could not be saved.');
+        }
+    });
 }
 
-// DOM load hone ka wait karo
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp);
+    document.addEventListener('DOMContentLoaded', initializeApp, { once: true });
 } else {
-  initializeApp();
+    initializeApp();
 }

@@ -1,43 +1,106 @@
 import { renderBuilder } from '../pages/builder.js';
+import { renderRuns, initRuns } from '../pages/runs.js';
+import { renderTemplatesPage } from '../pages/templates.js';
+import { renderSettingsPage } from '../pages/settings.js';
 import { initNodes } from '../components/nodes.js';
+import { refreshIcons } from './icons.js';
+import { waitForWorkflowRestore } from './persistence.js';
+import { getWorkflows, getRuns } from './database.js';
 
-
-export function initializeNavigation(showNotification) {
-    const upcomingLinks = document.querySelectorAll(
-        "[data-coming-soon]"
-    );
-
-    upcomingLinks.forEach((link) => {
-        link.addEventListener("click", (event) => {
-            event.preventDefault();
-            const moduleName = link.textContent.trim();
-            showNotification(
-                `${moduleName} is coming soon!`
-            );
-        });
-    });
+function renderDashboard() {
+    return `
+        <h1>Dashboard</h1>
+        <section class="stats-grid">
+            <article class="stat-card"><h3 id="stat-workflows">0</h3><p>Workflows</p></article>
+            <article class="stat-card"><h3 id="stat-runs">0</h3><p>Total Runs</p></article>
+            <article class="stat-card"><h3 id="stat-success">0%</h3><p>Success Rate</p></article>
+        </section>
+        <section class="quick-actions">
+            <a href="#builder" class="btn-primary"><i data-lucide="plus" aria-hidden="true"></i> New Workflow</a>
+            <a href="#templates" class="btn"><i data-lucide="layers" aria-hidden="true"></i> Browse Templates</a>
+        </section>
+        <section>
+            <h2>Recent Runs</h2>
+            <ul id="recent-runs" class="run-list"><li class="empty">No runs yet. Create a workflow to get started.</li></ul>
+        </section>
+    `;
 }
 
-function handleRoute() {
-    if (window.location.hash === '#builder') {
+function escapeHTML(value = '') {
+    return String(value).replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[char]);
+}
+
+async function loadDashboardData() {
+    const [workflows, runs] = await Promise.all([getWorkflows(), getRuns()]);
+    const workflowCount = document.getElementById('stat-workflows');
+    const runCount = document.getElementById('stat-runs');
+    const successRate = document.getElementById('stat-success');
+    if (!workflowCount) return;
+    workflowCount.textContent = workflows.length;
+    runCount.textContent = runs.length;
+    const successful = runs.filter(run => run.status === 'success').length;
+    successRate.textContent = runs.length ? `${Math.round(successful / runs.length * 100)}%` : '0%';
+
+    const recent = document.getElementById('recent-runs');
+    if (!recent) return;
+    recent.innerHTML = runs.slice(0, 5).map(run => `
+        <li class="dashboard-run-item">
+            <div><strong>${escapeHTML(run.workflowName || 'Workflow Execution')}</strong>
+            <p>${new Date(run.startedAt).toLocaleString()}</p></div>
+            <span class="run-status ${run.status}">${escapeHTML(run.status.toUpperCase())}</span>
+        </li>
+    `).join('') || '<li class="empty">No runs yet. Create a workflow to get started.</li>';
+}
+
+export function initializeNavigation(showNotification) {
+    let routeRequest = 0;
+
+    async function handleRoute() {
+        const requestId = ++routeRequest;
+        const route = window.location.hash || '#dashboard';
         const content = document.querySelector('.content');
         if (!content) return;
 
         try {
-            content.innerHTML = renderBuilder();
-            setTimeout(() => {
-                try {
-                    initNodes();
-                } catch (err) {
-                    console.error("Nodes init failed:", err);
-                }
-            }, 0);
-        } catch (err) {
-            console.error("Builder render failed:", err);
+            if (route === '#builder') await waitForWorkflowRestore();
+            if (requestId !== routeRequest) return;
+
+            switch (route) {
+                case '#dashboard':
+                    content.innerHTML = renderDashboard();
+                    loadDashboardData().catch(error => console.error('Dashboard data could not be loaded:', error));
+                    break;
+                case '#builder':
+                    content.innerHTML = renderBuilder();
+                    requestAnimationFrame(() => {
+                        if (requestId === routeRequest) initNodes();
+                    });
+                    break;
+                case '#runs':
+                    content.innerHTML = renderRuns();
+                    requestAnimationFrame(() => {
+                        if (requestId === routeRequest) initRuns();
+                    });
+                    break;
+                case '#templates':
+                    await renderTemplatesPage(content);
+                    break;
+                case '#settings':
+                    await renderSettingsPage(content);
+                    break;
+                default:
+                    window.location.hash = '#dashboard';
+                    return;
+            }
+            if (requestId === routeRequest) refreshIcons();
+        } catch (error) {
+            console.error('Navigation failed:', error);
+            showNotification('Unable to open this page. Check the browser console for details.');
         }
     }
-}
 
-// Dono events pe check karo
-window.addEventListener('hashchange', handleRoute);
-window.addEventListener('DOMContentLoaded', handleRoute);
+    window.addEventListener('hashchange', handleRoute);
+    handleRoute();
+}

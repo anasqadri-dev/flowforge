@@ -4,9 +4,9 @@
 
 **FlowForge** is a browser-based visual workflow automation platform that allows users to create, configure, and execute automated workflows without writing code.
 
-Users can drag workflow boxes onto a visual canvas, connect them to define execution order, configure their behavior, and execute the entire workflow through a built-in JavaScript execution engine.
+Users can drag workflow boxes onto a Drawflow-powered visual canvas, connect them to define execution order, configure their behavior, and execute the workflow through a built-in JavaScript execution engine. Drawflow's JSON import/export is used to synchronize the visual editor with FlowForge's internal workflow model; IndexedDB remains the primary workflow storage.
 
-The application runs entirely in the browser and uses IndexedDB for local data persistence. No backend server, external database, or frontend framework is required.
+The application runs entirely in the browser and uses IndexedDB for local data persistence. Drawflow provides the visual node editor, while FlowForge's internal state remains the source of truth for execution and persistence. Timer-based workflows execute only while the application tab remains open. No backend server, external database, or frontend framework is required. The interface uses Lucide SVG icons instead of emoji-based interface elements.
 
 ---
 
@@ -56,9 +56,10 @@ The platform provides a visual workflow builder where users can:
 | HTML5                                   | Application structure                     |
 | CSS3                                    | Styling and responsive interface          |
 | Vanilla JavaScript                      | Application logic and interactions        |
-| SVG                                     | Workflow connections and visual rendering |
+| Drawflow                                | Visual node editor, node positions, and connections |
+| Lucide Icons                            | Consistent interface icons (CDN)            |
 | IndexedDB                               | Local browser persistence                 |
-| HTML Drag and Drop API / Pointer Events | Drag-and-drop interactions                |
+| HTML Drag and Drop API                  | Dragging node types from the box library  |
 | Git & GitHub                            | Version control and collaboration         |
 | GitHub Pages                            | Application deployment                    |
 
@@ -83,12 +84,11 @@ The project follows a modular JavaScript architecture to keep the interface, wor
 
 - `src/css/` — Stylesheets and themes.
 - `src/js/core/` — Workflow engine and core logic.
-- `src/js/components/` — Canvas, nodes, connections, and notifications.
-- `src/js/panels/` — Workflow configuration panels.
-- `src/js/boxes/` — Workflow box implementations.
-- `src/js/storage/` — IndexedDB persistence.
-- `src/js/pages/` — Application screens.
-- `tests/` — Project tests.
+- `src/js/components/` — Drawflow editor integration, node interactions, settings panels, and notifications.
+- `src/js/core/` — Workflow state, execution engine, handlers, IndexedDB, persistence, navigation, themes, and icons.
+- `src/js/pages/` — Builder, Runs, Templates, and Settings screens.
+- `src/css/` — Application shell, layout, components, responsive rules, and theme variables.
+- `docs/` — Project documentation and diagrams.
 - `docs/` — Technical documentation and diagrams.
 
 ## Getting Started
@@ -146,7 +146,7 @@ To maintain a clean and collaborative codebase:
 
 - Develop a functional visual workflow editor.
 - Implement a browser-based workflow execution engine.
-- Support configurable workflow actions and conditions.
+- Support configurable workflow actions, conditional paths, and bounded loop bodies.
 - Provide reliable local persistence.
 - Maintain a responsive and accessible user interface.
 - Demonstrate practical Web Engineering concepts.

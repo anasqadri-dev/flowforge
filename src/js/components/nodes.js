@@ -1,248 +1,270 @@
 import { renderSettingsPanel } from './settings-panel.js';
+import { state, addNode, updateNodeConfig, moveNode, deleteNode, addConnection, deleteConnection, undo, redo } from '../core/state.js';
+import { runWorkflow } from '../core/engine.js';
+import { refreshIcons } from '../core/icons.js';
+import { showNotification } from './notifications.js';
+import { getSetting } from '../core/database.js';
+import { saveCurrentWorkflow } from '../core/persistence.js';
+import { getDrawflowEditor, initDrawflow, getNodePortCounts, createDrawflowNodeHtml, getAppNodeId, registerDrawflowNode, renderDrawflowFromState, isImportingDrawflow } from './editor.js';
+import { copySelectedNode, pasteNode } from './clipboard.js';
+
+let keyboardHandlerAttached = false;
+let syncingFromEditor = false;
+
+function getNodeConfig(drawflowNode) {
+    return structuredClone(drawflowNode?.data?.config || {});
+}
+
+function getSummary(type, config) {
+    if (type === 'HTTP Request' && config.method) return ' · ' + config.method;
+    if (type === 'Wait' && config.seconds !== undefined) return ' · ' + config.seconds + 's';
+    if (type === 'Set Variable' && config.name) return ' · ' + config.name;
+    if (type === 'Loop' && config.count) return ' · ' + config.count + ' iterations';
+    return '';
+}
+
+function openSettings(drawflowId) {
+    const editor = getDrawflowEditor();
+    const node = editor?.getNodeFromId(drawflowId);
+    const container = document.getElementById('settings-container');
+    if (!node || !container) return;
+    const type = node.data?.nodeType || node.name;
+    const appId = node.data?.appNodeId;
+    const config = getNodeConfig(node);
+    container.style.display = 'block';
+    container.innerHTML = renderSettingsPanel(type, config, appId);
+    refreshIcons(container);
+    container.querySelector('#close-settings')?.addEventListener('click', () => {
+        container.style.display = 'none';
+        container.innerHTML = '';
+    });
+    const form = container.querySelector('#settings-form');
+    if (!form) return;
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        const values = Object.fromEntries(new FormData(form).entries());
+        if (type === 'Loop') {
+            values.bodyNodeIds = new FormData(form).getAll('loop-body-node');
+            delete values['loop-body-node'];
+        }
+        if (type === 'Wait') {
+            const seconds = Number(values['wait-time']);
+            if (!Number.isFinite(seconds) || seconds < 0 || seconds > 60) return showNotification('Wait duration must be between 0 and 60 seconds.');
+            values.seconds = seconds; delete values['wait-time'];
+        }
+        if (type === 'Loop') {
+            const count = Number(values['loop-count']);
+            if (!Number.isInteger(count) || count < 1 || count > 100) return showNotification('Loop count must be an integer between 1 and 100.');
+            values.count = count; delete values['loop-count'];
+        }
+        if (type === 'HTTP Request') {
+            try {
+                if (values['http-headers'].trim()) JSON.parse(values['http-headers']);
+                if (values['http-body'].trim()) JSON.parse(values['http-body']);
+            } catch { return showNotification('Headers and request body must contain valid JSON.'); }
+            Object.assign(values, { url: values['http-url'], method: values['http-method'], headers: values['http-headers'], body: values['http-body'] });
+            ['http-url','http-method','http-headers','http-body'].forEach(key => delete values[key]);
+        }
+        const mappings = {
+            'schedule-time':'scheduleTime','transform-input':'input','variable-name':'name',
+            'variable-value':'value','condition-left':'left','condition-operator':'operator',
+            'condition-right':'right','notification-message':'message','log-message':'message'
+        };
+        Object.entries(mappings).forEach(([from,to]) => { if (from in values) { values[to] = values[from]; delete values[from]; } });
+        const configNext = { ...config, ...values };
+        syncingFromEditor = true;
+        updateNodeConfig(appId, configNext);
+        editor.updateNodeDataFromId(drawflowId, { ...node.data, config: configNext });
+        const element = document.querySelector('#drawflow-container .drawflow-node[id="node-' + drawflowId + '"] .node-text');
+        if (element) element.textContent = type + getSummary(type, configNext);
+        syncingFromEditor = false;
+        container.style.display = 'none';
+        showNotification('Configuration saved successfully.');
+    });
+}
+
+function setupDrawflowEvents(editor) {
+    editor.on('nodeCreated', id => {
+        if (isImportingDrawflow()) return;
+        const node = editor.getNodeFromId(id);
+        if (!node) return;
+        const type = node.data?.nodeType || node.name;
+        const appId = node.data?.appNodeId || crypto.randomUUID();
+        node.data = { ...node.data, appNodeId: appId, nodeType: type, config: node.data?.config || {} };
+        registerDrawflowNode(id, appId);
+        syncingFromEditor = true;
+        addNode({ id: appId, type, x: node.pos_x, y: node.pos_y, config: node.data.config });
+        syncingFromEditor = false;
+    });
+
+    editor.on('nodeMoved', id => {
+        if (isImportingDrawflow()) return;
+        const node = editor.getNodeFromId(id);
+        const appId = node?.data?.appNodeId;
+        if (!appId) return;
+        syncingFromEditor = true;
+        moveNode(appId, node.pos_x, node.pos_y);
+        syncingFromEditor = false;
+    });
+
+    editor.on('nodeRemoved', id => {
+        if (isImportingDrawflow()) return;
+        const appId = getAppNodeId(id);
+        if (!appId) return;
+        syncingFromEditor = true;
+        deleteNode(appId);
+        syncingFromEditor = false;
+        const panel = document.getElementById('settings-container');
+        if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+    });
+
+    editor.on('connectionCreated', connection => {
+        if (isImportingDrawflow()) return;
+        const from = getAppNodeId(connection.output_id);
+        const to = getAppNodeId(connection.input_id);
+        if (!from || !to) return;
+        const sourceNode = editor.getNodeFromId(connection.output_id);
+        const branch = sourceNode?.name === 'Condition'
+            ? (connection.output_class === 'output_2' ? 'false' : 'true') : null;
+        syncingFromEditor = true;
+        const added = addConnection({ from, to, branch, sourceHandle: connection.output_class });
+        syncingFromEditor = false;
+        if (!added) {
+            editor.removeSingleConnection(connection.output_id, connection.input_id, connection.output_class, connection.input_class);
+            showNotification('That connection is invalid, duplicated, or creates a cycle.');
+        }
+    });
+
+    editor.on('connectionRemoved', connection => {
+        if (isImportingDrawflow()) return;
+        const from = getAppNodeId(connection.output_id);
+        const to = getAppNodeId(connection.input_id);
+        const edge = state.connections.find(item => item.from === from && item.to === to);
+        if (edge) {
+            syncingFromEditor = true;
+            deleteConnection(edge.id);
+            syncingFromEditor = false;
+        }
+    });
+
+    editor.on('nodeSelected', id => openSettings(id));
+    editor.on('click', event => {
+        if (!event.target.closest('.drawflow-node')) {
+            const panel = document.getElementById('settings-container');
+            if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+        }
+    });
+}
+
+function initializeRunButton() {
+    const button = document.getElementById('run-workflow');
+    if (!button) return;
+    button.addEventListener('click', async () => {
+        if (button.disabled) return;
+        button.disabled = true;
+        button.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i> Running...';
+        refreshIcons(button);
+        try {
+            await saveCurrentWorkflow(false);
+            const result = await runWorkflow(state.nodes, state.connections, {}, {
+                workflowId: state.workflowId, workflowName: state.workflowName
+            });
+            showNotification(result.status === 'success'
+                ? 'Workflow completed successfully in ' + result.duration + ' ms.'
+                : 'Workflow failed: ' + result.error, 4000);
+            if (result.status === 'error' && result.steps.length) {
+                const failed = result.steps.find(step => step.status === 'error');
+                if (failed) {
+                    const drawflowId = Object.values(getDrawflowEditor()?.export()?.drawflow?.Home?.data || {})
+                        .find(node => node.data?.appNodeId === failed.nodeId)?.id;
+                    if (drawflowId) getDrawflowEditor().getNodeFromId(drawflowId)?.html && document.querySelector('#drawflow-container #node-' + drawflowId)?.classList.add('selected');
+                }
+            }
+            document.dispatchEvent(new CustomEvent('flowforge:workflow-completed', { detail: result }));
+        } catch (error) {
+            console.error('Workflow execution failed:', error);
+            showNotification('Workflow execution failed.');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i data-lucide="play" aria-hidden="true"></i> Run Workflow';
+            refreshIcons(button);
+        }
+    });
+}
+
+function initializeKeyboardShortcuts() {
+    if (keyboardHandlerAttached) return;
+    keyboardHandlerAttached = true;
+    document.addEventListener('keydown', event => {
+        if (event.target.matches('input, textarea, select, button') || event.target.isContentEditable) return;
+        const editor = getDrawflowEditor();
+        if (!editor) return;
+        const modifier = event.ctrlKey || event.metaKey;
+        if (modifier && event.key.toLowerCase() === 'z') {
+            event.preventDefault();
+            if (event.shiftKey) redo(); else undo();
+            return;
+        }
+        if (modifier && event.key.toLowerCase() === 'y') {
+            event.preventDefault(); redo(); return;
+        }
+        if (modifier && event.key.toLowerCase() === 'c') {
+            if (copySelectedNode(editor)) showNotification('Node copied.');
+        }
+        if (modifier && event.key.toLowerCase() === 'v') {
+            const id = pasteNode(editor);
+            if (id) showNotification('Node pasted.');
+        }
+        if (event.key === 'Delete' || event.key === 'Backspace') {
+            const selected = editor.node_selected;
+            if (selected) {
+                event.preventDefault();
+                editor.removeNodeId(String(selected.id).startsWith('node-') ? selected.id : 'node-' + selected.id);
+            }
+        }
+    });
+}
 
 export function initNodes() {
+    const container = document.getElementById('drawflow-container');
+    if (!container) return;
+    const editor = initDrawflow();
+    if (!editor) return;
     const boxes = document.querySelectorAll('.box-item');
-    const canvas = document.getElementById('canvas');
-    const searchBox = document.getElementById('search-box');
-
-    if (!canvas) return;
-
-    // 1. Search
-    if (searchBox) {
-        searchBox.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            boxes.forEach(box => {
-                box.style.display = box.textContent.toLowerCase().includes(term) ? 'flex' : 'none';
-            });
-        });
-    }
-
-    // 2. Drag Start
+    const search = document.getElementById('search-box');
+    search?.addEventListener('input', event => {
+        const term = event.target.value.toLowerCase();
+        boxes.forEach(box => { box.style.display = box.textContent.toLowerCase().includes(term) ? 'flex' : 'none'; });
+    });
     boxes.forEach(box => {
-        box.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', box.textContent.trim());
+        box.addEventListener('dragstart', event => event.dataTransfer.setData('node-type', box.dataset.nodeType || box.textContent.trim()));
+    });
+    container.addEventListener('dragover', event => event.preventDefault());
+    container.addEventListener('drop', event => {
+        event.preventDefault();
+        const type = event.dataTransfer.getData('node-type');
+        if (!type) return;
+        const ports = getNodePortCounts(type);
+        const rect = container.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / editor.zoom;
+        const y = (event.clientY - rect.top) / editor.zoom;
+        editor.addNode(type, ports.inputs, ports.outputs, x, y,
+            type.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            { nodeType: type, config: {} }, createDrawflowNodeHtml(type));
+        refreshIcons(container);
+    });
+    setupDrawflowEvents(editor);
+    initializeKeyboardShortcuts();
+    initializeRunButton();
+    if (!window.__flowforgeDrawflowSyncBound) {
+        document.addEventListener('flowforge:state-changed', () => {
+            if (!syncingFromEditor) renderDrawflowFromState();
         });
-    });
-
-    canvas.addEventListener('dragover', (e) => e.preventDefault());
-
-    // 3. Drop Node
-    canvas.addEventListener('drop', (e) => {
-        e.preventDefault();
-        let boxName = e.dataTransfer.getData('text/plain');
-        if (!boxName) return;
-        boxName = boxName.replace(/[▶🌐⚙📝⏳🔀🔁🔔📄⏱]/g, '').trim();
-
-        // Icon nikalo
-        let icon = '⚙';
-        const nameLower = boxName.toLowerCase();
-        if (nameLower.includes('http')) icon = '🌐';
-        else if (nameLower.includes('wait')) icon = '⏳';
-        else if (nameLower.includes('condition')) icon = '🔀';
-        else if (nameLower.includes('start')) icon = '▶';
-        else if (nameLower.includes('timer')) icon = '⏱';
-        else if (nameLower.includes('notification')) icon = '🔔';
-        else if (nameLower.includes('variable')) icon = '📝';
-        else if (nameLower.includes('loop')) icon = '🔁';
-        else if (nameLower.includes('transform')) icon = '⚙';
-        else if (nameLower.includes('log')) icon = '📄';
-
-        const newNode = document.createElement('div');
-        newNode.className = 'canvas-node';
-        newNode.innerHTML = `
-            <span class="icon">${icon}</span> 
-            <span class="node-text">${boxName}</span>
-            <button class="delete-btn">×</button>
-            <div class="dot dot-left"></div>
-            <div class="dot dot-right"></div>
-        `;
-        
-        newNode.style.left = e.offsetX + 'px';
-        newNode.style.top = e.offsetY + 'px';
-        canvas.appendChild(newNode);
-        
-        if (document.querySelector('.canvas-hint')) {
-            document.querySelector('.canvas-hint').style.display = 'none';
-        }
-
-        makeDraggable(newNode);
-
-        // 4. Node Click (Show Settings)
-        newNode.addEventListener('click', (event) => {
-            if (event.target.classList.contains('dot') || event.target.classList.contains('delete-btn')) return;
-            event.stopPropagation();
-
-            const settingsContainer = document.getElementById('settings-container');
-            if (settingsContainer) {
-                settingsContainer.style.display = 'block'; 
-                settingsContainer.innerHTML = renderSettingsPanel(boxName);
-                const closeBtn = document.getElementById('close-settings');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', () => settingsContainer.style.display = 'none');
-                }
-
-                setTimeout(() => {
-                    const form = document.getElementById('settings-form');
-                    if (form) {
-                        form.addEventListener('submit', (ev) => {
-                            ev.preventDefault();
-                            const formData = new FormData(form);
-                            const data = Object.fromEntries(formData.entries());
-                            
-                            let newText = boxName;
-                            if (data['http-url']) newText += ` (${data['http-method']})`;
-                            else if (data['wait-time']) newText += ` (${data['wait-time']}s)`;
-
-                            newNode.querySelector('.node-text').textContent = newText;
-                            settingsContainer.style.display = 'none'; 
-                            alert("Saved!"); 
-                        });
-                    }
-                }, 10);
-            }
-        });
-
-        // Delete Node
-        newNode.querySelector('.delete-btn').addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            newNode.remove();
-        });
-
-        // === 5. Dot se drag karke line khinchne ka logic ===
-        const rightDot = newNode.querySelector('.dot-right');
-        const svgLayer = document.getElementById('svg-layer');
-        let isDrawing = false;
-        let currentPath = null;
-
-        rightDot.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            isDrawing = true;
-
-            // Start point (Center se)
-            const startX = newNode.offsetLeft + (newNode.offsetWidth / 2);
-            const startY = newNode.offsetTop + (newNode.offsetHeight / 2);
-
-            currentPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            currentPath.setAttribute("stroke", "#4f46e5");
-            currentPath.setAttribute("stroke-width", "2");
-            currentPath.setAttribute("stroke-dasharray", "5,5"); 
-            currentPath.setAttribute("fill", "none");
-            svgLayer.appendChild(currentPath);
-
-            function onMouseMove(e) {
-                if (!isDrawing) return;
-                const rect = canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                const d = `M ${startX} ${startY} C ${startX + 50} ${startY}, ${mouseX - 50} ${mouseY}, ${mouseX} ${mouseY}`;
-                currentPath.setAttribute("d", d);
-            }
-
-            function onMouseUp(e) {
-                isDrawing = false;
-                currentPath.remove(); 
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-
-                const targetNode = e.target.closest('.canvas-node');
-                if (targetNode && targetNode !== newNode) {
-                    drawConnection(newNode, targetNode); 
-                }
-            }
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        });
-    });
-}
-function getPathD(src, tgt) {
-    // Source ke upar wale kinare ka center
-    const x1 = src.offsetLeft + (src.offsetWidth / 2);
-    const y1 = src.offsetTop; 
-    
-    // Target ke upar wale kinare se 10px pehle ruk jayenge (taake arrow bahar dikhe)
-    const x2 = tgt.offsetLeft + (tgt.offsetWidth / 2);
-    const y2 = tgt.offsetTop - 10; 
-
-    // Seedhi line
-    return `M ${x1} ${y1} L ${x2} ${y2}`;
-}
-
-// Move Function
-function makeDraggable(element) {
-    element.addEventListener('mousedown', (e) => {
-        if (e.target.classList.contains('dot') || e.target.classList.contains('delete-btn')) return;
-        
-        let startX = e.clientX - element.offsetLeft;
-        let startY = e.clientY - element.offsetTop;
-
-        function onMouseMove(e) {
-            element.style.left = (e.clientX - startX) + 'px';
-            element.style.top = (e.clientY - startY) + 'px';
-
-            // Lines ko update karo
-            if (element.connections) {
-                element.connections.forEach(conn => {
-                    if (conn.isSource) {
-                        conn.path.setAttribute("d", getPathD(element, conn.otherNode));
-                    } else {
-                        conn.path.setAttribute("d", getPathD(conn.otherNode, element));
-                    }
-                });
-            }
-        }
-        
-        function onMouseUp() {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-    });
-}
-
-// Draw Connection
-function drawConnection(node1, node2) {
-    const svg = document.getElementById('svg-layer');
-    if(!svg) return;
-    
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    
-    path.setAttribute("d", getPathD(node1, node2));
-    path.setAttribute("stroke", "#4f46e5");
-    path.setAttribute("stroke-width", "2");
-    path.setAttribute("fill", "none");
-    path.setAttribute("marker-end", "url(#arrowhead)"); 
-
-    // Line Select & Delete logic
-    path.style.pointerEvents = 'stroke';
-    path.style.cursor = 'pointer';
-
-    path.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('#svg-layer path').forEach(p => p.setAttribute("stroke", "#4f46e5"));
-        path.setAttribute("stroke", "#ff4444");
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Delete' && path.getAttribute("stroke") === "#ff4444") {
-            path.remove();
-        }
-    });
-
-    svg.appendChild(path);
-
-    // Right-click se delete
-    path.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        path.remove();
-    });
-
-    // Nodes ke sath connect karo
-    if (!node1.connections) node1.connections = [];
-    if (!node2.connections) node2.connections = [];
-    
-    node1.connections.push({ path: path, otherNode: node2, isSource: true });
-    node2.connections.push({ path: path, otherNode: node1, isSource: false });
+        document.addEventListener('flowforge:workflow-loaded', () => renderDrawflowFromState());
+        window.__flowforgeDrawflowSyncBound = true;
+    }
+    const name = document.getElementById('workflow-name');
+    if (name) name.value = state.workflowName || 'Untitled Workflow';
+    refreshIcons(container);
 }
