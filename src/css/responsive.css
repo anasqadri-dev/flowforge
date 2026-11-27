@@ -28,8 +28,12 @@
     .sidebar {
         width: 100%;
         min-width: 0;
-        flex: 0 0 100%;
+        flex: 0 0 auto;
+        position: relative;
+        top: auto;
+        height: auto;
         min-height: auto;
+        overflow: visible;
 
         padding: var(--space-4);
 
