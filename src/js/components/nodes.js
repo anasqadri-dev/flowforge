@@ -4,6 +4,7 @@ import { runWorkflow } from '../core/engine.js';
 import { refreshIcons } from '../core/icons.js';
 import { showNotification } from './notifications.js';
 import { getSetting } from '../core/database.js';
+import { saveCurrentWorkflow } from '../core/persistence.js';
 import { getDrawflowEditor, initDrawflow, getNodePortCounts, createDrawflowNodeHtml, getAppNodeId, registerDrawflowNode, renderDrawflowFromState, isImportingDrawflow } from './editor.js';
 import { copySelectedNode, pasteNode } from './clipboard.js';
 
@@ -165,6 +166,7 @@ function initializeRunButton() {
         button.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i> Running...';
         refreshIcons(button);
         try {
+            await saveCurrentWorkflow(false);
             const result = await runWorkflow(state.nodes, state.connections, {}, {
                 workflowId: state.workflowId, workflowName: state.workflowName
             });
