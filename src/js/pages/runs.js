@@ -1,4 +1,5 @@
 
+import { getSetting } from '../core/database.js';
 import {
     getRuns,
     getRun,
@@ -254,7 +255,8 @@ export function initRuns() {
 
         try {
             if (button.id === 'clear-runs') {
-                if (!confirm('Delete all execution history?')) return;
+                const preferences = await getSetting('preferences') || { confirmDelete: true };
+                if (preferences.confirmDelete !== false && !confirm('Delete all execution history?')) return;
 
                 await clearRuns();
 
@@ -264,6 +266,8 @@ export function initRuns() {
             }
 
             if (button.classList.contains('delete-run')) {
+                const preferences = await getSetting('preferences') || { confirmDelete: true };
+                if (preferences.confirmDelete !== false && !confirm('Delete this execution record?')) return;
                 const id = button.dataset.runId;
 
                 await deleteRun(id);
