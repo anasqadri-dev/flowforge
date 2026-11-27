@@ -1,11 +1,5 @@
 
-import { getSetting } from '../core/database.js';
-import {
-    getRuns,
-    getRun,
-    deleteRun,
-    clearRuns
-} from '../core/database.js';
+import { getSetting, getRuns, getRun, deleteRun, clearRuns } from '../core/database.js';
 
 export function renderRuns() {
     return `
