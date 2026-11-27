@@ -102,6 +102,10 @@ function findLoopRegion(loopId, bodyStart, adjacency, nodeMap) {
         if (!node) break;
         body.push(node);
         const outgoing = adjacency.get(current) || [];
+        if (outgoing.length === 0) {
+            current = null;
+            break;
+        }
         if (outgoing.length !== 1) {
             throw new Error('A Loop body must be a single connected path with one outgoing connection per step.');
         }
