@@ -8,6 +8,7 @@ import {
 } from '../core/database.js';
 import { showNotification } from '../components/notifications.js';
 import { setTheme } from '../core/theme.js';
+import { state, replaceWorkflowState } from '../core/state.js';
 
 export async function renderSettingsPage(container) {
     const savedTheme = await getSetting('theme') || localStorage.getItem('theme') || 'light';
@@ -80,6 +81,11 @@ export async function renderSettingsPage(container) {
             await Promise.all(workflows.map(workflow => deleteWorkflow(workflow.id)));
             await clearRuns();
             await clearCustomTemplates();
+            clearTimeout(window.flowForgeAutoSaveTimer);
+            state.workflowId = null;
+            state.workflowName = 'Untitled Workflow';
+            state.createdAt = null;
+            replaceWorkflowState({ nodes: [], connections: [] });
             localStorage.removeItem('flowforge-active-workflow');
             showNotification('Application data cleared successfully.');
             window.location.hash = '#dashboard';
