@@ -43,7 +43,7 @@ function selectField(label, name, options, selected) {
   `;
 }
 
-function textareaField(label, name, value = '', placeholder = '') {
+function textareaField(label, name, value = '', placeholder = '', required = true) {
   return `
     <div class="form-group">
       <label for="${name}">${label}</label>
@@ -52,7 +52,7 @@ function textareaField(label, name, value = '', placeholder = '') {
         name="${name}"
         placeholder="${escapeHTML(placeholder)}"
         rows="4"
-        required
+        ${required ? "required" : ""}
       >${escapeHTML(value)}</textarea>
     </div>
   `;
@@ -103,14 +103,16 @@ export function renderSettingsPanel(boxName, config = {}) {
           'Request Headers (JSON)',
           'http-headers',
           config.headers || '',
-          '{"Content-Type": "application/json"}'
+          '{"Content-Type": "application/json"}',
+          false
         )}
 
         ${textareaField(
           'Request Body (JSON)',
           'http-body',
           config.body || '',
-          '{"name": "FlowForge"}'
+          '{"name": "FlowForge"}',
+          false
         )}
       `;
       break;
