@@ -1,762 +1,262 @@
-
-// src/js/components/nodes.js
-
 import { renderSettingsPanel } from './settings-panel.js';
-import { state } from '../core/state.js';
+import { state, addNode, updateNodeConfig, moveNode, deleteNode, addConnection, deleteConnection, undo, redo } from '../core/state.js';
 import { runWorkflow } from '../core/engine.js';
 import { refreshIcons } from '../core/icons.js';
 import { showNotification } from './notifications.js';
 import { getSetting } from '../core/database.js';
-
-function initializeRunButton() {
-  const runButton = document.getElementById('run-workflow');
-
-  if (!runButton) return;
-
-  runButton.addEventListener('click', async () => {
-    if (runButton.disabled) return;
-
-    runButton.disabled = true;
-    runButton.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i> Running...';
-    refreshIcons(runButton);
-
-    try {
-      const result = await runWorkflow(state.nodes, state.connections, {}, {
-        workflowId: state.workflowId,
-        workflowName: state.workflowName
-      });
-
-      showNotification(
-        result.status === 'success'
-          ? `Workflow completed successfully in ${result.duration} ms.`
-          : `Workflow failed: ${result.error}`,
-        4000
-      );
-
-      // Highlight failed node if execution fails.
-      if (result.status === 'error' && result.steps.length) {
-        const failedStep = result.steps.find(
-          step => step.status === 'error'
-        );
-
-        if (failedStep) {
-          const failedNode = document.querySelector(
-            `[data-node-id="${failedStep.nodeId}"]`
-          );
-
-          failedNode?.classList.add('selected');
-        }
-      }
-
-      document.dispatchEvent(
-        new CustomEvent('flowforge:workflow-completed', {
-          detail: result
-        })
-      );
-
-    } catch (error) {
-      console.error('Workflow execution failed:', error);
-    } finally {
-      runButton.disabled = false;
-      runButton.innerHTML = '<i data-lucide="play" aria-hidden="true"></i> Run Workflow';
-      refreshIcons(runButton);
-    }
-  });
-}
-
-import {
-  addNode,
-  updateNodeConfig,
-  moveNode,
-  deleteNode,
-  addConnection,
-  deleteConnection
-} from '../core/state.js';
+import { getDrawflowEditor, initDrawflow, getNodePortCounts, createDrawflowNodeHtml, getAppNodeId, renderDrawflowFromState, syncStateFromDrawflow, isImportingDrawflow } from './editor.js';
+import { copySelectedNode, pasteNode } from './clipboard.js';
 
 let keyboardHandlerAttached = false;
+let syncingFromEditor = false;
 
-function getBoxName(text) {
-  return text
-    .replace(/^[^\p{L}\p{N}]*/u, '')
-    .trim();
+function getNodeConfig(drawflowNode) {
+    return structuredClone(drawflowNode?.data?.config || {});
 }
 
-function getIcon(boxName) {
-  const name = boxName.toLowerCase();
-
-  if (name.includes('http')) return 'globe';
-  if (name.includes('wait')) return 'timer';
-  if (name.includes('condition')) return 'git-branch';
-  if (name.includes('start')) return 'play';
-  if (name.includes('timer')) return 'clock';
-  if (name.includes('notification')) return 'bell';
-  if (name.includes('variable')) return 'variable';
-  if (name.includes('loop')) return 'repeat';
-  if (name.includes('transform')) return 'sliders-horizontal';
-  if (name.includes('log')) return 'file-text';
-
-  return 'settings';
+function getSummary(type, config) {
+    if (type === 'HTTP Request' && config.method) return ' · ' + config.method;
+    if (type === 'Wait' && config.seconds !== undefined) return ' · ' + config.seconds + 's';
+    if (type === 'Set Variable' && config.name) return ' · ' + config.name;
+    if (type === 'Loop' && config.count) return ' · ' + config.count + ' iterations';
+    return '';
 }
 
-function getConfig(node) {
-  try {
-    return JSON.parse(node.dataset.config || '{}');
-  } catch {
-    return {};
-  }
-}
-
-function getNodeSummary(boxName, config) {
-  switch (boxName) {
-    case 'HTTP Request':
-      return config.method ? `(${config.method})` : '';
-
-    case 'Wait':
-      return config.seconds !== undefined
-        ? `(${config.seconds}s)`
-        : '';
-
-    case 'Set Variable':
-      return config.name ? `(${config.name})` : '';
-
-    case 'Loop':
-      return config.count !== undefined
-        ? `(${config.count} times)`
-        : '';
-
-    default:
-      return '';
-  }
-}
-
-function updateNodeLabel(node, boxName, config) {
-  const label = node.querySelector('.node-text');
-
-  if (label) {
-    label.textContent =
-      `${boxName} ${getNodeSummary(boxName, config)}`;
-  }
-}
-
-function openSettings(node, boxName) {
-  const container = document.getElementById('settings-container');
-
-  if (!container) return;
-
-  const config = getConfig(node);
-
-  container.style.display = 'block';
-  container.innerHTML = renderSettingsPanel(boxName, config, node.dataset.nodeId);
-  refreshIcons(container);
-
-  const closeButton = document.getElementById('close-settings');
-
-  closeButton?.addEventListener('click', () => {
-    container.style.display = 'none';
-    container.innerHTML = '';
-  });
-
-  const form = document.getElementById('settings-form');
-
-  if (!form) return;
-
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    if (!form.reportValidity()) return;
-
-    const formData = new FormData(form);
-    const updatedConfig = Object.fromEntries(formData.entries());
-    if (boxName === 'Loop') {
-      updatedConfig.bodyNodeIds = formData.getAll('loop-body-node');
-      delete updatedConfig['loop-body-node'];
-    }
-
-    // Validate numeric configurations.
-    if (boxName === 'Wait') {
-      const seconds = Number(updatedConfig['wait-time']);
-
-      if (!Number.isFinite(seconds) || seconds < 0) {
-        alert('Wait duration must be a non-negative number.');
-        return;
-      }
-
-      updatedConfig.seconds = seconds;
-      delete updatedConfig['wait-time'];
-    }
-
-    if (boxName === 'Loop') {
-      const count = Number(updatedConfig['loop-count']);
-
-      if (!Number.isInteger(count) || count < 1 || count > 100) {
-        alert('Loop count must be an integer between 1 and 100.');
-        return;
-      }
-
-      updatedConfig.count = count;
-      delete updatedConfig['loop-count'];
-    }
-
-    // Validate HTTP JSON fields.
-    if (boxName === 'HTTP Request') {
-      try {
-        if (updatedConfig['http-headers'].trim()) {
-          JSON.parse(updatedConfig['http-headers']);
+function openSettings(drawflowId) {
+    const editor = getDrawflowEditor();
+    const node = editor?.getNodeFromId(drawflowId);
+    const container = document.getElementById('settings-container');
+    if (!node || !container) return;
+    const type = node.data?.nodeType || node.name;
+    const appId = node.data?.appNodeId;
+    const config = getNodeConfig(node);
+    container.style.display = 'block';
+    container.innerHTML = renderSettingsPanel(type, config, appId);
+    refreshIcons(container);
+    container.querySelector('#close-settings')?.addEventListener('click', () => {
+        container.style.display = 'none';
+        container.innerHTML = '';
+    });
+    const form = container.querySelector('#settings-form');
+    if (!form) return;
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        const values = Object.fromEntries(new FormData(form).entries());
+        if (type === 'Loop') {
+            values.bodyNodeIds = new FormData(form).getAll('loop-body-node');
+            delete values['loop-body-node'];
         }
-
-        if (updatedConfig['http-body'].trim()) {
-          JSON.parse(updatedConfig['http-body']);
+        if (type === 'Wait') {
+            const seconds = Number(values['wait-time']);
+            if (!Number.isFinite(seconds) || seconds < 0) return showNotification('Wait duration must be a non-negative number.');
+            values.seconds = seconds; delete values['wait-time'];
         }
-      } catch {
-        alert('Headers and request body must contain valid JSON.');
-        return;
-      }
-
-      updatedConfig.url = updatedConfig['http-url'];
-      updatedConfig.method = updatedConfig['http-method'];
-      updatedConfig.headers = updatedConfig['http-headers'];
-      updatedConfig.body = updatedConfig['http-body'];
-
-      delete updatedConfig['http-url'];
-      delete updatedConfig['http-method'];
-      delete updatedConfig['http-headers'];
-      delete updatedConfig['http-body'];
-    }
-
-    // Normalize other form field names.
-    const fieldMappings = {
-      'schedule-time': 'scheduleTime',
-      'transform-input': 'input',
-      'variable-name': 'name',
-      'variable-value': 'value',
-      'condition-left': 'left',
-      'condition-operator': 'operator',
-      'condition-right': 'right',
-      'notification-message': 'message',
-      'log-message': 'message'
-    };
-
-    Object.entries(fieldMappings).forEach(([oldKey, newKey]) => {
-      if (oldKey in updatedConfig) {
-        updatedConfig[newKey] = updatedConfig[oldKey];
-        delete updatedConfig[oldKey];
-      }
-    });
-
-    // Keep existing values if applicable.
-    const finalConfig = {
-      ...config,
-      ...updatedConfig
-    };
-
-    // Update central application state.
-    updateNodeConfig(node.dataset.nodeId, finalConfig);
-
-    // Keep DOM synchronized.
-    node.dataset.config = JSON.stringify(finalConfig);
-
-    updateNodeLabel(node, boxName, finalConfig);
-
-    container.style.display = 'none';
-
-    document.dispatchEvent(new CustomEvent('flowforge:config-updated', {
-      detail: {
-        nodeId: node.dataset.nodeId,
-        config: finalConfig
-      }
-    }));
-
-    const notification = document.getElementById('notification');
-
-    if (notification) {
-      notification.textContent = 'Configuration saved successfully!';
-      notification.classList.add('show');
-
-      setTimeout(() => {
-        notification.classList.remove('show');
-      }, 2500);
-    }
-  });
-}
-
-function getPathD(source, target) {
-  const x1 = source.offsetLeft + source.offsetWidth;
-  const y1 = source.offsetTop + source.offsetHeight / 2;
-
-  const x2 = target.offsetLeft;
-  const y2 = target.offsetTop + target.offsetHeight / 2;
-
-  const controlOffset = Math.max(40, Math.abs(x2 - x1) / 2);
-
-  return `
-    M ${x1} ${y1}
-    C ${x1 + controlOffset} ${y1},
-      ${x2 - controlOffset} ${y2},
-      ${x2} ${y2}
-  `;
-}
-
-function updateConnections(node) {
-  if (!node.connections) return;
-
-  node.connections.forEach(connection => {
-    const d = connection.isSource
-      ? getPathD(node, connection.otherNode)
-      : getPathD(connection.otherNode, node);
-
-    connection.path.setAttribute('d', d);
-  });
-}
-
-function removeConnection(connection) {
-  if (!connection) return;
-
-  connection.path.remove();
-
-  deleteConnection(connection.id);
-}
-
-function makeDraggable(node, canvas) {
-  node.addEventListener('mousedown', (event) => {
-    if (
-      event.target.classList.contains('dot') ||
-      event.target.closest('.delete-btn')
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const canvasRect = canvas.getBoundingClientRect();
-
-    const startX =
-      event.clientX - canvasRect.left - node.offsetLeft;
-
-    const startY =
-      event.clientY - canvasRect.top - node.offsetTop;
-
-    function onMouseMove(moveEvent) {
-      const x = moveEvent.clientX - canvasRect.left - startX;
-      const y = moveEvent.clientY - canvasRect.top - startY;
-
-      node.style.left = `${Math.max(0, x)}px`;
-      node.style.top = `${Math.max(0, y)}px`;
-
-      updateConnections(node);
-    }
-
-    function onMouseUp() {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-
-      moveNode(
-        node.dataset.nodeId,
-        parseFloat(node.style.left),
-        parseFloat(node.style.top)
-      );
-    }
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  });
-}
-
-function drawConnection(
-    source,
-    target,
-    savedConnection = null
-) {
-  const svg = document.getElementById('svg-layer');
-
-  if (!svg || source === target) return;
-
-  // Add connection to application state.
-  const connection = savedConnection || addConnection({
-    from: source.dataset.nodeId,
-    to: target.dataset.nodeId
-});
-
-  if (!connection) return;
-
-  const path = document.createElementNS(
-    'http://www.w3.org/2000/svg',
-    'path'
-  );
-
-  path.setAttribute('d', getPathD(source, target));
-  path.setAttribute('stroke', '#5145e5');
-  path.setAttribute('stroke-width', '2');
-  path.setAttribute('fill', 'none');
-  path.setAttribute('marker-end', 'url(#arrowhead)');
-
-  path.dataset.connectionId = connection.id;
-
-  path.style.pointerEvents = 'stroke';
-  path.style.cursor = 'pointer';
-
-  path.addEventListener('click', (event) => {
-    event.stopPropagation();
-
-    document.querySelectorAll('#svg-layer path[data-connection-id]')
-      .forEach(item => {
-        item.setAttribute('stroke', '#5145e5');
-        item.classList.remove('selected-connection');
-      });
-
-    path.setAttribute('stroke', '#ff4444');
-    path.classList.add('selected-connection');
-  });
-
-  path.addEventListener('contextmenu', (event) => {
-    event.preventDefault();
-    removeConnection(connection);
-  });
-
-  svg.appendChild(path);
-
-  if (!source.connections) source.connections = [];
-  if (!target.connections) target.connections = [];
-
-  source.connections.push({
-    id: connection.id,
-    path,
-    otherNode: target,
-    isSource: true
-  });
-
-  target.connections.push({
-    id: connection.id,
-    path,
-    otherNode: source,
-    isSource: false
-  });
-}
-
-function initializeKeyboardShortcuts() {
-  if (keyboardHandlerAttached) return;
-
-  keyboardHandlerAttached = true;
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
-
-    // Don't delete connections while editing a form.
-    if (
-      event.target.matches('input, textarea, select, button') ||
-      event.target.isContentEditable
-    ) {
-      return;
-    }
-
-    const selectedPath = document.querySelector(
-      '#svg-layer path.selected-connection'
-    );
-
-    if (!selectedPath) return;
-
-    const connection = {
-      id: selectedPath.dataset.connectionId,
-      path: selectedPath
-    };
-
-    removeConnection(connection);
-  });
-}
-
-function createNode(
-    boxName,
-    canvas,
-    x,
-    y,
-    savedNode = null
-) {
-  const id = savedNode?.id || crypto.randomUUID();
-  const icon = getIcon(boxName);
-
-  const node = document.createElement('div');
-
-  node.className = 'canvas-node';
-  node.dataset.nodeId = id;
-  node.dataset.nodeType = boxName;
-  node.dataset.config = JSON.stringify(
-    savedNode?.config || {}
-);
-
-  node.innerHTML = `
-    <span class="icon"><i data-lucide="${icon}" aria-hidden="true"></i></span>
-
-    <span class="node-text">${boxName}</span>
-
-    <button
-      type="button"
-      class="delete-btn"
-      aria-label="Delete node"
-    >
-      <i data-lucide="trash-2" aria-hidden="true"></i>
-    </button>
-
-    <div class="dot dot-left"></div>
-    <div class="dot dot-right"></div>
-  `;
-
-  node.style.left = `${x}px`;
-  node.style.top = `${y}px`;
-
-  canvas.appendChild(node);
-  refreshIcons(node);
-
-  // Store node in central application state.
-  if (!savedNode) {
-    addNode({
-        id,
-        type: boxName,
-        x,
-        y,
-        config: {}
-    });
-}
-
-  makeDraggable(node, canvas);
-
-  node.addEventListener('click', (event) => {
-    if (
-      event.target.classList.contains('dot') ||
-      event.target.classList.contains('delete-btn')
-    ) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    document.querySelectorAll('.canvas-node.selected')
-      .forEach(item => item.classList.remove('selected'));
-
-    node.classList.add('selected');
-
-    openSettings(node, boxName);
-  });
-
-  // Delete node and all associated connections.
-  node.querySelector('.delete-btn').addEventListener('click', async (event) => {
-    event.stopPropagation();
-    const preferences = await getSetting('preferences') || { confirmDelete: true };
-    if (preferences.confirmDelete !== false && !window.confirm('Delete this node and its connections?')) return;
-
-    if (node.connections) {
-      [...node.connections].forEach(connection => {
-        removeConnection(connection);
-
-        const other = connection.otherNode;
-
-        if (other.connections) {
-          other.connections = other.connections.filter(
-            item => item.id !== connection.id
-          );
+        if (type === 'Loop') {
+            const count = Number(values['loop-count']);
+            if (!Number.isInteger(count) || count < 1 || count > 100) return showNotification('Loop count must be an integer between 1 and 100.');
+            values.count = count; delete values['loop-count'];
         }
-      });
-    }
-
-    deleteNode(id);
-
-    node.remove();
-
-    const settingsContainer =
-      document.getElementById('settings-container');
-
-    if (settingsContainer) {
-      settingsContainer.style.display = 'none';
-    }
-
-    if (!canvas.querySelector('.canvas-node')) {
-      const hint = canvas.querySelector('.canvas-hint');
-
-      if (hint) hint.style.display = 'block';
-    }
-  });
-
-  // Connection drawing.
-  const rightDot = node.querySelector('.dot-right');
-
-  rightDot.addEventListener('mousedown', (event) => {
-    event.stopPropagation();
-    event.preventDefault();
-
-    const svg = document.getElementById('svg-layer');
-
-    if (!svg) return;
-
-    const preview = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'path'
-    );
-
-    preview.setAttribute('stroke', '#5145e5');
-    preview.setAttribute('stroke-width', '2');
-    preview.setAttribute('stroke-dasharray', '5,5');
-    preview.setAttribute('fill', 'none');
-
-    svg.appendChild(preview);
-
-    const canvasRect = canvas.getBoundingClientRect();
-
-    const startX = node.offsetLeft + node.offsetWidth;
-    const startY = node.offsetTop + node.offsetHeight / 2;
-
-    function onMouseMove(moveEvent) {
-      const mouseX = moveEvent.clientX - canvasRect.left;
-      const mouseY = moveEvent.clientY - canvasRect.top;
-
-      preview.setAttribute(
-        'd',
-        `M ${startX} ${startY} L ${mouseX} ${mouseY}`
-      );
-    }
-
-    function onMouseUp(upEvent) {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-
-      preview.remove();
-
-      const target = document.elementFromPoint(
-        upEvent.clientX,
-        upEvent.clientY
-      )?.closest('.canvas-node');
-
-      if (target && target !== node && canvas.contains(target)) {
-        drawConnection(node, target);
-      }
-    }
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  });
-
-  return node;
+        if (type === 'HTTP Request') {
+            try {
+                if (values['http-headers'].trim()) JSON.parse(values['http-headers']);
+                if (values['http-body'].trim()) JSON.parse(values['http-body']);
+            } catch { return showNotification('Headers and request body must contain valid JSON.'); }
+            Object.assign(values, { url: values['http-url'], method: values['http-method'], headers: values['http-headers'], body: values['http-body'] });
+            ['http-url','http-method','http-headers','http-body'].forEach(key => delete values[key]);
+        }
+        const mappings = {
+            'schedule-time':'scheduleTime','transform-input':'input','variable-name':'name',
+            'variable-value':'value','condition-left':'left','condition-operator':'operator',
+            'condition-right':'right','notification-message':'message','log-message':'message'
+        };
+        Object.entries(mappings).forEach(([from,to]) => { if (from in values) { values[to] = values[from]; delete values[from]; } });
+        const configNext = { ...config, ...values };
+        syncingFromEditor = true;
+        updateNodeConfig(appId, configNext);
+        editor.updateNodeDataFromId(drawflowId, { ...node.data, config: configNext });
+        const element = document.querySelector('#drawflow-container .drawflow-node[id="node-' + drawflowId + '"] .node-text');
+        if (element) element.textContent = type + getSummary(type, configNext);
+        syncingFromEditor = false;
+        container.style.display = 'none';
+        showNotification('Configuration saved successfully.');
+    });
 }
 
-function renderSavedWorkflow() {
-    const canvas = document.getElementById('canvas');
-
-    if (!canvas) return;
-
-    // Remove existing nodes.
-    canvas.querySelectorAll('.canvas-node').forEach(node => {
-        node.remove();
+function setupDrawflowEvents(editor) {
+    editor.on('nodeCreated', id => {
+        if (isImportingDrawflow()) return;
+        const node = editor.getNodeFromId(id);
+        if (!node) return;
+        const type = node.data?.nodeType || node.name;
+        const appId = node.data?.appNodeId || crypto.randomUUID();
+        node.data = { ...node.data, appNodeId: appId, nodeType: type, config: node.data?.config || {} };
+        syncingFromEditor = true;
+        addNode({ id: appId, type, x: node.pos_x, y: node.pos_y, config: node.data.config });
+        syncingFromEditor = false;
     });
 
-    // Remove existing connection paths.
-    document.querySelectorAll(
-        '#svg-layer path[data-connection-id]'
-    ).forEach(path => path.remove());
-
-    // Rebuild nodes.
-    state.nodes.forEach(savedNode => {
-        createNode(
-            savedNode.type,
-            canvas,
-            savedNode.x,
-            savedNode.y,
-            savedNode
-        );
+    editor.on('nodeMoved', id => {
+        if (isImportingDrawflow()) return;
+        const node = editor.getNodeFromId(id);
+        const appId = node?.data?.appNodeId;
+        if (!appId) return;
+        syncingFromEditor = true;
+        moveNode(appId, node.pos_x, node.pos_y);
+        syncingFromEditor = false;
     });
 
-    // Rebuild connections.
-    state.connections.forEach(connection => {
-        const source = canvas.querySelector(
-            `[data-node-id="${connection.from}"]`
-        );
+    editor.on('nodeRemoved', id => {
+        if (isImportingDrawflow()) return;
+        const appId = getAppNodeId(id);
+        if (!appId) return;
+        syncingFromEditor = true;
+        deleteNode(appId);
+        syncingFromEditor = false;
+        const panel = document.getElementById('settings-container');
+        if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+    });
 
-        const target = canvas.querySelector(
-            `[data-node-id="${connection.to}"]`
-        );
-
-        if (source && target) {
-            drawConnection(source, target, connection);
+    editor.on('connectionCreated', connection => {
+        if (isImportingDrawflow()) return;
+        const from = getAppNodeId(connection.output_id);
+        const to = getAppNodeId(connection.input_id);
+        if (!from || !to) return;
+        const sourceNode = editor.getNodeFromId(connection.output_id);
+        const branch = sourceNode?.name === 'Condition'
+            ? (connection.output_class === 'output_2' ? 'false' : 'true') : null;
+        syncingFromEditor = true;
+        const added = addConnection({ from, to, branch, sourceHandle: connection.output_class });
+        syncingFromEditor = false;
+        if (!added) {
+            editor.removeSingleConnection(connection.output_id, connection.input_id, connection.output_class, connection.input_class);
+            showNotification('That connection is invalid, duplicated, or creates a cycle.');
         }
     });
 
-    const hint = canvas.querySelector('.canvas-hint');
+    editor.on('connectionRemoved', connection => {
+        if (isImportingDrawflow()) return;
+        const from = getAppNodeId(connection.output_id);
+        const to = getAppNodeId(connection.input_id);
+        const edge = state.connections.find(item => item.from === from && item.to === to);
+        if (edge) {
+            syncingFromEditor = true;
+            deleteConnection(edge.id);
+            syncingFromEditor = false;
+        }
+    });
 
-    if (hint) {
-        hint.style.display =
-            state.nodes.length ? 'none' : 'block';
-    }
+    editor.on('nodeSelected', id => openSettings(id));
+    editor.on('click', event => {
+        if (!event.target.closest('.drawflow-node')) {
+            const panel = document.getElementById('settings-container');
+            if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+        }
+    });
+}
 
-    const nameInput = document.getElementById('workflow-name');
+function initializeRunButton() {
+    const button = document.getElementById('run-workflow');
+    if (!button) return;
+    button.addEventListener('click', async () => {
+        if (button.disabled) return;
+        button.disabled = true;
+        button.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i> Running...';
+        refreshIcons(button);
+        try {
+            const result = await runWorkflow(state.nodes, state.connections, {}, {
+                workflowId: state.workflowId, workflowName: state.workflowName
+            });
+            showNotification(result.status === 'success'
+                ? 'Workflow completed successfully in ' + result.duration + ' ms.'
+                : 'Workflow failed: ' + result.error, 4000);
+            if (result.status === 'error' && result.steps.length) {
+                const failed = result.steps.find(step => step.status === 'error');
+                if (failed) {
+                    const drawflowId = Object.values(getDrawflowEditor()?.export()?.drawflow?.Home?.data || {})
+                        .find(node => node.data?.appNodeId === failed.nodeId)?.id;
+                    if (drawflowId) getDrawflowEditor().getNodeFromId(drawflowId)?.html && document.querySelector('#drawflow-container #node-' + drawflowId)?.classList.add('selected');
+                }
+            }
+            document.dispatchEvent(new CustomEvent('flowforge:workflow-completed', { detail: result }));
+        } catch (error) {
+            console.error('Workflow execution failed:', error);
+            showNotification('Workflow execution failed.');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i data-lucide="play" aria-hidden="true"></i> Run Workflow';
+            refreshIcons(button);
+        }
+    });
+}
 
-    if (nameInput) {
-        nameInput.value = state.workflowName;
-    }
+function initializeKeyboardShortcuts(editor) {
+    if (keyboardHandlerAttached) return;
+    keyboardHandlerAttached = true;
+    document.addEventListener('keydown', event => {
+        if (event.target.matches('input, textarea, select, button') || event.target.isContentEditable) return;
+        const modifier = event.ctrlKey || event.metaKey;
+        if (modifier && event.key.toLowerCase() === 'z') {
+            event.preventDefault();
+            if (event.shiftKey) redo(); else undo();
+            return;
+        }
+        if (modifier && event.key.toLowerCase() === 'y') {
+            event.preventDefault(); redo(); return;
+        }
+        if (modifier && event.key.toLowerCase() === 'c') {
+            if (copySelectedNode(editor)) showNotification('Node copied.');
+        }
+        if (modifier && event.key.toLowerCase() === 'v') {
+            const id = pasteNode(editor);
+            if (id) showNotification('Node pasted.');
+        }
+        if (event.key === 'Delete' || event.key === 'Backspace') {
+            const selected = editor.node_selected;
+            if (selected) {
+                event.preventDefault();
+                editor.removeNodeId('node-' + selected.id);
+            }
+        }
+    });
 }
 
 export function initNodes() {
-  const boxes = document.querySelectorAll('.box-item');
-  const canvas = document.getElementById('canvas');
-  const searchBox = document.getElementById('search-box');
-
-  if (!canvas) return;
-
-  initializeKeyboardShortcuts();
-
-  // Search box.
-  if (searchBox) {
-    searchBox.addEventListener('input', (event) => {
-      const term = event.target.value.toLowerCase();
-
-      boxes.forEach(box => {
-        box.style.display =
-          box.textContent.toLowerCase().includes(term)
-            ? 'flex'
-            : 'none';
-      });
+    const container = document.getElementById('drawflow-container');
+    if (!container) return;
+    const editor = initDrawflow();
+    if (!editor) return;
+    const boxes = document.querySelectorAll('.box-item');
+    const search = document.getElementById('search-box');
+    search?.addEventListener('input', event => {
+        const term = event.target.value.toLowerCase();
+        boxes.forEach(box => { box.style.display = box.textContent.toLowerCase().includes(term) ? 'flex' : 'none'; });
     });
-  }
-
-  // Drag from box library.
-  boxes.forEach(box => {
-    box.addEventListener('dragstart', (event) => {
-      event.dataTransfer.setData(
-        'text/plain',
-        box.textContent.trim()
-      );
+    boxes.forEach(box => {
+        box.addEventListener('dragstart', event => event.dataTransfer.setData('node-type', box.dataset.nodeType || box.textContent.trim()));
     });
-  });
-
-  canvas.addEventListener('dragover', (event) => {
-    event.preventDefault();
-  });
-
-  // Drop a new node.
-  canvas.addEventListener('drop', (event) => {
-    event.preventDefault();
-
-    const boxName = getBoxName(
-      event.dataTransfer.getData('text/plain')
-    );
-
-    if (!boxName) return;
-
-    const rect = canvas.getBoundingClientRect();
-
-    const x = Math.max(0, event.clientX - rect.left);
-    const y = Math.max(0, event.clientY - rect.top);
-
-    createNode(boxName, canvas, x, y);
-
-    const hint = canvas.querySelector('.canvas-hint');
-
-    if (hint) hint.style.display = 'none';
-  });
-  if (!window.__flowforgeRestoreListener) {
-    document.addEventListener(
-        'flowforge:workflow-loaded',
-        renderSavedWorkflow
-    );
-
-    window.__flowforgeRestoreListener = true;
-}
-
-renderSavedWorkflow();
-  initializeRunButton();
+    container.addEventListener('dragover', event => event.preventDefault());
+    container.addEventListener('drop', event => {
+        event.preventDefault();
+        const type = event.dataTransfer.getData('node-type');
+        if (!type) return;
+        const ports = getNodePortCounts(type);
+        const rect = container.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / editor.zoom;
+        const y = (event.clientY - rect.top) / editor.zoom;
+        editor.addNode(type, ports.inputs, ports.outputs, x, y,
+            type.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            { nodeType: type, config: {} }, createDrawflowNodeHtml(type));
+        refreshIcons(container);
+    });
+    setupDrawflowEvents(editor);
+    initializeKeyboardShortcuts(editor);
+    initializeRunButton();
+    document.addEventListener('flowforge:state-changed', () => {
+        if (!syncingFromEditor) renderDrawflowFromState();
+    });
+    document.addEventListener('flowforge:workflow-loaded', () => renderDrawflowFromState());
+    const name = document.getElementById('workflow-name');
+    if (name) name.value = state.workflowName || 'Untitled Workflow';
+    refreshIcons(container);
 }
