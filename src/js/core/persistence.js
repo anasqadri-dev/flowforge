@@ -92,6 +92,11 @@ export function waitForWorkflowRestore() {
     return restorePromise;
 }
 
+export function cancelPendingAutoSave() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+}
+
 export function exportWorkflow() {
     try {
         const workflow = createWorkflowData();
