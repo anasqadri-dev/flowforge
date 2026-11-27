@@ -202,29 +202,71 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
 
             if (node.type === 'Loop') {
                 const count = Number(node.config?.count);
+                const bodyNodeIds = Array.isArray(node.config?.bodyNodeIds)
+                    ? node.config.bodyNodeIds
+                    : [];
                 if (!Number.isInteger(count) || count < 1 || count > 100) {
                     throw new Error('Loop count must be between 1 and 100.');
                 }
-                const bodyEdge = chooseLoopBodyEdge(outgoing);
-                const continuationEdge = outgoing.find(edge => edge !== bodyEdge && !['body', 'loop', 'repeat'].includes(String(edge.branch || edge.sourceHandle || '').toLowerCase()));
-                if (!bodyEdge) {
-                    context[node.id] = { ...output, completedIterations: 0 };
-                    currentId = null;
-                    continue;
+                if (!bodyNodeIds.length) {
+                    throw new Error('Select at least one node for the Loop body in its settings.');
                 }
 
-                const region = findLoopRegion(node.id, bodyEdge.to, graph.adjacency, graph.nodeMap);
-                if (!region.body.length) throw new Error('The Loop body is empty.');
-                const bodyIds = new Set(region.body.map(item => item.id));
-                for (let iteration = 1; iteration <= count; iteration++) {
-                    for (const bodyNode of region.body) {
-                        await executeNode(bodyNode, iteration);
+                const bodySet = new Set(bodyNodeIds);
+                if (bodySet.size !== bodyNodeIds.length || bodySet.has(node.id)) {
+                    throw new Error('Loop body selection contains duplicate or invalid nodes.');
+                }
+                for (const id of bodySet) {
+                    if (!graph.nodeMap.has(id)) throw new Error('Loop body references a node that no longer exists.');
+                    if (executed.has(id)) throw new Error('A Loop body node has already executed before the Loop.');
+                }
+
+                const bodyIncoming = new Map([...bodySet].map(id => [id, []]));
+                const bodyOutgoing = new Map([...bodySet].map(id => [id, []]));
+                for (const id of bodySet) {
+                    for (const edge of graph.adjacency.get(id) || []) {
+                        if (bodySet.has(edge.to)) bodyOutgoing.get(id).push(edge.to);
+                    }
+                    for (const edge of graph.reverse.get(id) || []) {
+                        if (bodySet.has(edge.from)) bodyIncoming.get(id).push(edge.from);
+                    }
+                    if (bodyOutgoing.get(id).length > 1 || bodyIncoming.get(id).length > 1) {
+                        throw new Error('Loop body nodes must form a single connected path.');
                     }
                 }
-                region.body.forEach(item => executed.add(item.id));
-                context[node.id] = { ...output, completedIterations: count };
-                currentId = region.continuationId || continuationEdge?.to || null;
-                if (currentId && bodyIds.has(currentId)) currentId = null;
+
+                const bodyRoots = [...bodySet].filter(id => bodyIncoming.get(id).length === 0);
+                if (bodyRoots.length !== 1) throw new Error('Loop body must have exactly one starting node.');
+                const bodyOrder = [];
+                let bodyCursor = bodyRoots[0];
+                while (bodyCursor && !bodyOrder.includes(bodyCursor)) {
+                    bodyOrder.push(bodyCursor);
+                    bodyCursor = bodyOutgoing.get(bodyCursor)[0] || null;
+                }
+                if (bodyOrder.length !== bodySet.size) {
+                    throw new Error('Every selected Loop body node must belong to the same connected path.');
+                }
+
+                const loopEntryEdges = outgoing.filter(edge => bodySet.has(edge.to));
+                if (loopEntryEdges.length !== 1 || loopEntryEdges[0].to !== bodyRoots[0]) {
+                    throw new Error('Connect the Loop node to the first selected Loop body node.');
+                }
+
+                const explicitExit = outgoing.find(edge => !bodySet.has(edge.to));
+                const lastBodyEdges = graph.adjacency.get(bodyOrder[bodyOrder.length - 1]) || [];
+                const bodyExit = lastBodyEdges.find(edge => !bodySet.has(edge.to));
+                if (lastBodyEdges.filter(edge => bodySet.has(edge.to)).length > 0) {
+                    throw new Error('Loop body path is invalid.');
+                }
+
+                for (let iteration = 1; iteration <= count; iteration++) {
+                    for (const bodyId of bodyOrder) {
+                        await executeNode(graph.nodeMap.get(bodyId), iteration);
+                    }
+                }
+                bodyOrder.forEach(id => executed.add(id));
+                context[node.id] = { ...output, completedIterations: count, bodyNodeIds: bodyOrder };
+                currentId = explicitExit?.to || bodyExit?.to || null;
                 continue;
             }
 
