@@ -145,7 +145,7 @@ function openSettings(node, boxName) {
   const config = getConfig(node);
 
   container.style.display = 'block';
-  container.innerHTML = renderSettingsPanel(boxName, config);
+  container.innerHTML = renderSettingsPanel(boxName, config, node.dataset.nodeId);
   refreshIcons(container);
 
   const closeButton = document.getElementById('close-settings');
@@ -166,6 +166,10 @@ function openSettings(node, boxName) {
 
     const formData = new FormData(form);
     const updatedConfig = Object.fromEntries(formData.entries());
+    if (boxName === 'Loop') {
+      updatedConfig.bodyNodeIds = formData.getAll('loop-body-node');
+      delete updatedConfig['loop-body-node'];
+    }
 
     // Validate numeric configurations.
     if (boxName === 'Wait') {
@@ -183,8 +187,8 @@ function openSettings(node, boxName) {
     if (boxName === 'Loop') {
       const count = Number(updatedConfig['loop-count']);
 
-      if (!Number.isInteger(count) || count < 1) {
-        alert('Loop count must be a positive integer.');
+      if (!Number.isInteger(count) || count < 1 || count > 100) {
+        alert('Loop count must be an integer between 1 and 100.');
         return;
       }
 
