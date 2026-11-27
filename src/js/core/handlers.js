@@ -41,7 +41,14 @@ export const handlers = {
         if (!config.scheduleTime) throw new Error('Please configure the schedule date and time.');
         const scheduledAt = new Date(config.scheduleTime);
         if (Number.isNaN(scheduledAt.getTime())) throw new Error('Invalid schedule date.');
-        return { scheduledAt: scheduledAt.toISOString() };
+        const delay = scheduledAt.getTime() - Date.now();
+        if (delay > 2147483647) {
+            throw new Error('Scheduled start must be within approximately 24 days. Keep this browser tab open until execution begins.');
+        }
+        if (delay > 0) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        return { scheduledAt: scheduledAt.toISOString(), triggeredAt: new Date().toISOString() };
     },
 
     'HTTP Request': async (config, context) => {
