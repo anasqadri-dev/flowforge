@@ -1,35 +1,39 @@
+// src/js/core/theme.js
 const THEME_STORAGE_KEY = "theme";
 
 function applyTheme(theme) {
-    document.body.classList.toggle("dark", theme === "dark");
+    if (theme === "dark") {
+        document.body.classList.add("dark");
+    } else {
+        document.body.classList.remove("dark");
+    }
     localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 
-export function initializeTheme(themeToggle) {
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    const initialTheme = savedTheme === "dark" ? "dark" : "light";
+export function initializeTheme() {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || "light";
+    applyTheme(savedTheme);
 
-    applyTheme(initialTheme);
+    // Button ko dhoondne ke liye thoda wait karo
+    setTimeout(() => {
+        const themeToggle = document.getElementById("theme-toggle");
+        
+        if (!themeToggle) {
+            console.warn("⚠️ Theme toggle button was not found in the DOM.");
+            return;
+        }
 
-    if (!themeToggle) {
-        console.warn("Theme toggle button was not found.");
-        return;
-    }
+        // Button ko clone karo taake purane events clear ho jayein
+        const newToggle = themeToggle.cloneNode(true);
+        if (themeToggle.parentNode) {
+            themeToggle.parentNode.replaceChild(newToggle, themeToggle);
+        }
 
-    themeToggle.setAttribute(
-        "aria-pressed",
-        String(initialTheme === "dark")
-    );
-
-    themeToggle.addEventListener("click", () => {
-        const isDarkMode = document.body.classList.contains("dark");
-        const newTheme = isDarkMode ? "light" : "dark";
-
-        applyTheme(newTheme);
-
-        themeToggle.setAttribute(
-            "aria-pressed",
-            String(newTheme === "dark")
-        );
-    });
+        newToggle.addEventListener("click", () => {
+            const isDark = document.body.classList.contains("dark");
+            const newTheme = isDark ? "light" : "dark";
+            applyTheme(newTheme);
+            console.log("✅ Theme changed to:", newTheme); 
+        });
+    }, 100);
 }
