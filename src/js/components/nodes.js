@@ -1,248 +1,612 @@
+
+// src/js/components/nodes.js
+
 import { renderSettingsPanel } from './settings-panel.js';
 
-export function initNodes() {
-    const boxes = document.querySelectorAll('.box-item');
-    const canvas = document.getElementById('canvas');
-    const searchBox = document.getElementById('search-box');
+import {
+  addNode,
+  updateNodeConfig,
+  moveNode,
+  deleteNode,
+  addConnection,
+  deleteConnection
+} from '../core/state.js';
 
-    if (!canvas) return;
+let keyboardHandlerAttached = false;
 
-    // 1. Search
-    if (searchBox) {
-        searchBox.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            boxes.forEach(box => {
-                box.style.display = box.textContent.toLowerCase().includes(term) ? 'flex' : 'none';
-            });
-        });
+function getBoxName(text) {
+  return text
+    .replace(/[▶🌐⚙📝⏳🔀🔁🔔📄⏱]/gu, '')
+    .trim();
+}
+
+function getIcon(boxName) {
+  const name = boxName.toLowerCase();
+
+  if (name.includes('http')) return '🌐';
+  if (name.includes('wait')) return '⏳';
+  if (name.includes('condition')) return '🔀';
+  if (name.includes('start')) return '▶';
+  if (name.includes('timer')) return '⏱';
+  if (name.includes('notification')) return '🔔';
+  if (name.includes('variable')) return '📝';
+  if (name.includes('loop')) return '🔁';
+  if (name.includes('transform')) return '⚙';
+  if (name.includes('log')) return '📄';
+
+  return '⚙';
+}
+
+function getConfig(node) {
+  try {
+    return JSON.parse(node.dataset.config || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function getNodeSummary(boxName, config) {
+  switch (boxName) {
+    case 'HTTP Request':
+      return config.method ? `(${config.method})` : '';
+
+    case 'Wait':
+      return config.seconds !== undefined
+        ? `(${config.seconds}s)`
+        : '';
+
+    case 'Set Variable':
+      return config.name ? `(${config.name})` : '';
+
+    case 'Loop':
+      return config.count !== undefined
+        ? `(${config.count} times)`
+        : '';
+
+    default:
+      return '';
+  }
+}
+
+function updateNodeLabel(node, boxName, config) {
+  const label = node.querySelector('.node-text');
+
+  if (label) {
+    label.textContent =
+      `${boxName} ${getNodeSummary(boxName, config)}`;
+  }
+}
+
+function openSettings(node, boxName) {
+  const container = document.getElementById('settings-container');
+
+  if (!container) return;
+
+  const config = getConfig(node);
+
+  container.style.display = 'block';
+  container.innerHTML = renderSettingsPanel(boxName, config);
+
+  const closeButton = document.getElementById('close-settings');
+
+  closeButton?.addEventListener('click', () => {
+    container.style.display = 'none';
+  });
+
+  const form = document.getElementById('settings-form');
+
+  if (!form) return;
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    if (!form.reportValidity()) return;
+
+    const formData = new FormData(form);
+    const updatedConfig = Object.fromEntries(formData.entries());
+
+    // Validate numeric configurations.
+    if (boxName === 'Wait') {
+      const seconds = Number(updatedConfig['wait-time']);
+
+      if (!Number.isFinite(seconds) || seconds < 0) {
+        alert('Wait duration must be a non-negative number.');
+        return;
+      }
+
+      updatedConfig.seconds = seconds;
+      delete updatedConfig['wait-time'];
     }
 
-    // 2. Drag Start
-    boxes.forEach(box => {
-        box.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', box.textContent.trim());
-        });
-    });
+    if (boxName === 'Loop') {
+      const count = Number(updatedConfig['loop-count']);
 
-    canvas.addEventListener('dragover', (e) => e.preventDefault());
+      if (!Number.isInteger(count) || count < 1) {
+        alert('Loop count must be a positive integer.');
+        return;
+      }
 
-    // 3. Drop Node
-    canvas.addEventListener('drop', (e) => {
-        e.preventDefault();
-        let boxName = e.dataTransfer.getData('text/plain');
-        if (!boxName) return;
-        boxName = boxName.replace(/[▶🌐⚙📝⏳🔀🔁🔔📄⏱]/g, '').trim();
+      updatedConfig.count = count;
+      delete updatedConfig['loop-count'];
+    }
 
-        // Icon nikalo
-        let icon = '⚙';
-        const nameLower = boxName.toLowerCase();
-        if (nameLower.includes('http')) icon = '🌐';
-        else if (nameLower.includes('wait')) icon = '⏳';
-        else if (nameLower.includes('condition')) icon = '🔀';
-        else if (nameLower.includes('start')) icon = '▶';
-        else if (nameLower.includes('timer')) icon = '⏱';
-        else if (nameLower.includes('notification')) icon = '🔔';
-        else if (nameLower.includes('variable')) icon = '📝';
-        else if (nameLower.includes('loop')) icon = '🔁';
-        else if (nameLower.includes('transform')) icon = '⚙';
-        else if (nameLower.includes('log')) icon = '📄';
-
-        const newNode = document.createElement('div');
-        newNode.className = 'canvas-node';
-        newNode.innerHTML = `
-            <span class="icon">${icon}</span> 
-            <span class="node-text">${boxName}</span>
-            <button class="delete-btn">×</button>
-            <div class="dot dot-left"></div>
-            <div class="dot dot-right"></div>
-        `;
-        
-        newNode.style.left = e.offsetX + 'px';
-        newNode.style.top = e.offsetY + 'px';
-        canvas.appendChild(newNode);
-        
-        if (document.querySelector('.canvas-hint')) {
-            document.querySelector('.canvas-hint').style.display = 'none';
+    // Validate HTTP JSON fields.
+    if (boxName === 'HTTP Request') {
+      try {
+        if (updatedConfig['http-headers'].trim()) {
+          JSON.parse(updatedConfig['http-headers']);
         }
 
-        makeDraggable(newNode);
-
-        // 4. Node Click (Show Settings)
-        newNode.addEventListener('click', (event) => {
-            if (event.target.classList.contains('dot') || event.target.classList.contains('delete-btn')) return;
-            event.stopPropagation();
-
-            const settingsContainer = document.getElementById('settings-container');
-            if (settingsContainer) {
-                settingsContainer.style.display = 'block'; 
-                settingsContainer.innerHTML = renderSettingsPanel(boxName);
-                const closeBtn = document.getElementById('close-settings');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', () => settingsContainer.style.display = 'none');
-                }
-
-                setTimeout(() => {
-                    const form = document.getElementById('settings-form');
-                    if (form) {
-                        form.addEventListener('submit', (ev) => {
-                            ev.preventDefault();
-                            const formData = new FormData(form);
-                            const data = Object.fromEntries(formData.entries());
-                            
-                            let newText = boxName;
-                            if (data['http-url']) newText += ` (${data['http-method']})`;
-                            else if (data['wait-time']) newText += ` (${data['wait-time']}s)`;
-
-                            newNode.querySelector('.node-text').textContent = newText;
-                            settingsContainer.style.display = 'none'; 
-                            alert("Saved!"); 
-                        });
-                    }
-                }, 10);
-            }
-        });
-
-        // Delete Node
-        newNode.querySelector('.delete-btn').addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            newNode.remove();
-        });
-
-        // === 5. Dot se drag karke line khinchne ka logic ===
-        const rightDot = newNode.querySelector('.dot-right');
-        const svgLayer = document.getElementById('svg-layer');
-        let isDrawing = false;
-        let currentPath = null;
-
-        rightDot.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            isDrawing = true;
-
-            // Start point (Center se)
-            const startX = newNode.offsetLeft + (newNode.offsetWidth / 2);
-            const startY = newNode.offsetTop + (newNode.offsetHeight / 2);
-
-            currentPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            currentPath.setAttribute("stroke", "#4f46e5");
-            currentPath.setAttribute("stroke-width", "2");
-            currentPath.setAttribute("stroke-dasharray", "5,5"); 
-            currentPath.setAttribute("fill", "none");
-            svgLayer.appendChild(currentPath);
-
-            function onMouseMove(e) {
-                if (!isDrawing) return;
-                const rect = canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                const d = `M ${startX} ${startY} C ${startX + 50} ${startY}, ${mouseX - 50} ${mouseY}, ${mouseX} ${mouseY}`;
-                currentPath.setAttribute("d", d);
-            }
-
-            function onMouseUp(e) {
-                isDrawing = false;
-                currentPath.remove(); 
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-
-                const targetNode = e.target.closest('.canvas-node');
-                if (targetNode && targetNode !== newNode) {
-                    drawConnection(newNode, targetNode); 
-                }
-            }
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        });
-    });
-}
-function getPathD(src, tgt) {
-    // Source ke upar wale kinare ka center
-    const x1 = src.offsetLeft + (src.offsetWidth / 2);
-    const y1 = src.offsetTop; 
-    
-    // Target ke upar wale kinare se 10px pehle ruk jayenge (taake arrow bahar dikhe)
-    const x2 = tgt.offsetLeft + (tgt.offsetWidth / 2);
-    const y2 = tgt.offsetTop - 10; 
-
-    // Seedhi line
-    return `M ${x1} ${y1} L ${x2} ${y2}`;
-}
-
-// Move Function
-function makeDraggable(element) {
-    element.addEventListener('mousedown', (e) => {
-        if (e.target.classList.contains('dot') || e.target.classList.contains('delete-btn')) return;
-        
-        let startX = e.clientX - element.offsetLeft;
-        let startY = e.clientY - element.offsetTop;
-
-        function onMouseMove(e) {
-            element.style.left = (e.clientX - startX) + 'px';
-            element.style.top = (e.clientY - startY) + 'px';
-
-            // Lines ko update karo
-            if (element.connections) {
-                element.connections.forEach(conn => {
-                    if (conn.isSource) {
-                        conn.path.setAttribute("d", getPathD(element, conn.otherNode));
-                    } else {
-                        conn.path.setAttribute("d", getPathD(conn.otherNode, element));
-                    }
-                });
-            }
+        if (updatedConfig['http-body'].trim()) {
+          JSON.parse(updatedConfig['http-body']);
         }
-        
-        function onMouseUp() {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
+      } catch {
+        alert('Headers and request body must contain valid JSON.');
+        return;
+      }
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+      updatedConfig.url = updatedConfig['http-url'];
+      updatedConfig.method = updatedConfig['http-method'];
+      updatedConfig.headers = updatedConfig['http-headers'];
+      updatedConfig.body = updatedConfig['http-body'];
+
+      delete updatedConfig['http-url'];
+      delete updatedConfig['http-method'];
+      delete updatedConfig['http-headers'];
+      delete updatedConfig['http-body'];
+    }
+
+    // Normalize other form field names.
+    const fieldMappings = {
+      'schedule-time': 'scheduleTime',
+      'transform-input': 'input',
+      'variable-name': 'name',
+      'variable-value': 'value',
+      'condition-left': 'left',
+      'condition-operator': 'operator',
+      'condition-right': 'right',
+      'notification-message': 'message',
+      'log-message': 'message'
+    };
+
+    Object.entries(fieldMappings).forEach(([oldKey, newKey]) => {
+      if (oldKey in updatedConfig) {
+        updatedConfig[newKey] = updatedConfig[oldKey];
+        delete updatedConfig[oldKey];
+      }
     });
+
+    // Keep existing values if applicable.
+    const finalConfig = {
+      ...config,
+      ...updatedConfig
+    };
+
+    // Update central application state.
+    updateNodeConfig(node.dataset.nodeId, finalConfig);
+
+    // Keep DOM synchronized.
+    node.dataset.config = JSON.stringify(finalConfig);
+
+    updateNodeLabel(node, boxName, finalConfig);
+
+    container.style.display = 'none';
+
+    document.dispatchEvent(new CustomEvent('flowforge:config-updated', {
+      detail: {
+        nodeId: node.dataset.nodeId,
+        config: finalConfig
+      }
+    }));
+
+    const notification = document.getElementById('notification');
+
+    if (notification) {
+      notification.textContent = 'Configuration saved successfully!';
+      notification.classList.add('show');
+
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 2500);
+    }
+  });
 }
 
-// Draw Connection
-function drawConnection(node1, node2) {
+function getPathD(source, target) {
+  const x1 = source.offsetLeft + source.offsetWidth;
+  const y1 = source.offsetTop + source.offsetHeight / 2;
+
+  const x2 = target.offsetLeft;
+  const y2 = target.offsetTop + target.offsetHeight / 2;
+
+  const controlOffset = Math.max(40, Math.abs(x2 - x1) / 2);
+
+  return `
+    M ${x1} ${y1}
+    C ${x1 + controlOffset} ${y1},
+      ${x2 - controlOffset} ${y2},
+      ${x2} ${y2}
+  `;
+}
+
+function updateConnections(node) {
+  if (!node.connections) return;
+
+  node.connections.forEach(connection => {
+    const d = connection.isSource
+      ? getPathD(node, connection.otherNode)
+      : getPathD(connection.otherNode, node);
+
+    connection.path.setAttribute('d', d);
+  });
+}
+
+function removeConnection(connection) {
+  if (!connection) return;
+
+  connection.path.remove();
+
+  deleteConnection(connection.id);
+}
+
+function makeDraggable(node, canvas) {
+  node.addEventListener('mousedown', (event) => {
+    if (
+      event.target.classList.contains('dot') ||
+      event.target.classList.contains('delete-btn')
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const startX =
+      event.clientX - canvasRect.left - node.offsetLeft;
+
+    const startY =
+      event.clientY - canvasRect.top - node.offsetTop;
+
+    function onMouseMove(moveEvent) {
+      const x = moveEvent.clientX - canvasRect.left - startX;
+      const y = moveEvent.clientY - canvasRect.top - startY;
+
+      node.style.left = `${Math.max(0, x)}px`;
+      node.style.top = `${Math.max(0, y)}px`;
+
+      updateConnections(node);
+    }
+
+    function onMouseUp() {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      moveNode(
+        node.dataset.nodeId,
+        parseFloat(node.style.left),
+        parseFloat(node.style.top)
+      );
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+}
+
+function drawConnection(source, target) {
+  const svg = document.getElementById('svg-layer');
+
+  if (!svg || source === target) return;
+
+  // Add connection to application state.
+  const connection = addConnection({
+    from: source.dataset.nodeId,
+    to: target.dataset.nodeId
+  });
+
+  if (!connection) return;
+
+  const path = document.createElementNS(
+    'http://www.w3.org/2000/svg',
+    'path'
+  );
+
+  path.setAttribute('d', getPathD(source, target));
+  path.setAttribute('stroke', '#5145e5');
+  path.setAttribute('stroke-width', '2');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('marker-end', 'url(#arrowhead)');
+
+  path.dataset.connectionId = connection.id;
+
+  path.style.pointerEvents = 'stroke';
+  path.style.cursor = 'pointer';
+
+  path.addEventListener('click', (event) => {
+    event.stopPropagation();
+
+    document.querySelectorAll('#svg-layer path[data-connection-id]')
+      .forEach(item => {
+        item.setAttribute('stroke', '#5145e5');
+        item.classList.remove('selected-connection');
+      });
+
+    path.setAttribute('stroke', '#ff4444');
+    path.classList.add('selected-connection');
+  });
+
+  path.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    removeConnection(connection);
+  });
+
+  svg.appendChild(path);
+
+  if (!source.connections) source.connections = [];
+  if (!target.connections) target.connections = [];
+
+  source.connections.push({
+    id: connection.id,
+    path,
+    otherNode: target,
+    isSource: true
+  });
+
+  target.connections.push({
+    id: connection.id,
+    path,
+    otherNode: source,
+    isSource: false
+  });
+}
+
+function initializeKeyboardShortcuts() {
+  if (keyboardHandlerAttached) return;
+
+  keyboardHandlerAttached = true;
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+
+    // Don't delete connections while editing a form.
+    if (
+      event.target.matches('input, textarea, select, button') ||
+      event.target.isContentEditable
+    ) {
+      return;
+    }
+
+    const selectedPath = document.querySelector(
+      '#svg-layer path.selected-connection'
+    );
+
+    if (!selectedPath) return;
+
+    const connection = {
+      id: selectedPath.dataset.connectionId,
+      path: selectedPath
+    };
+
+    removeConnection(connection);
+  });
+}
+
+function createNode(boxName, canvas, x, y) {
+  const id = crypto.randomUUID();
+  const icon = getIcon(boxName);
+
+  const node = document.createElement('div');
+
+  node.className = 'canvas-node';
+  node.dataset.nodeId = id;
+  node.dataset.nodeType = boxName;
+  node.dataset.config = '{}';
+
+  node.innerHTML = `
+    <span class="icon">${icon}</span>
+
+    <span class="node-text">${boxName}</span>
+
+    <button
+      type="button"
+      class="delete-btn"
+      aria-label="Delete node"
+    >
+      ×
+    </button>
+
+    <div class="dot dot-left"></div>
+    <div class="dot dot-right"></div>
+  `;
+
+  node.style.left = `${x}px`;
+  node.style.top = `${y}px`;
+
+  canvas.appendChild(node);
+
+  // Store node in central application state.
+  addNode({
+    id,
+    type: boxName,
+    x,
+    y,
+    config: {}
+  });
+
+  makeDraggable(node, canvas);
+
+  node.addEventListener('click', (event) => {
+    if (
+      event.target.classList.contains('dot') ||
+      event.target.classList.contains('delete-btn')
+    ) {
+      return;
+    }
+
+    event.stopPropagation();
+
+    document.querySelectorAll('.canvas-node.selected')
+      .forEach(item => item.classList.remove('selected'));
+
+    node.classList.add('selected');
+
+    openSettings(node, boxName);
+  });
+
+  // Delete node and all associated connections.
+  node.querySelector('.delete-btn').addEventListener('click', (event) => {
+    event.stopPropagation();
+
+    if (node.connections) {
+      [...node.connections].forEach(connection => {
+        removeConnection(connection);
+
+        const other = connection.otherNode;
+
+        if (other.connections) {
+          other.connections = other.connections.filter(
+            item => item.id !== connection.id
+          );
+        }
+      });
+    }
+
+    deleteNode(id);
+
+    node.remove();
+
+    const settingsContainer =
+      document.getElementById('settings-container');
+
+    if (settingsContainer) {
+      settingsContainer.style.display = 'none';
+    }
+
+    if (!canvas.querySelector('.canvas-node')) {
+      const hint = canvas.querySelector('.canvas-hint');
+
+      if (hint) hint.style.display = 'block';
+    }
+  });
+
+  // Connection drawing.
+  const rightDot = node.querySelector('.dot-right');
+
+  rightDot.addEventListener('mousedown', (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+
     const svg = document.getElementById('svg-layer');
-    if(!svg) return;
-    
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    
-    path.setAttribute("d", getPathD(node1, node2));
-    path.setAttribute("stroke", "#4f46e5");
-    path.setAttribute("stroke-width", "2");
-    path.setAttribute("fill", "none");
-    path.setAttribute("marker-end", "url(#arrowhead)"); 
 
-    // Line Select & Delete logic
-    path.style.pointerEvents = 'stroke';
-    path.style.cursor = 'pointer';
+    if (!svg) return;
 
-    path.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('#svg-layer path').forEach(p => p.setAttribute("stroke", "#4f46e5"));
-        path.setAttribute("stroke", "#ff4444");
+    const preview = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'path'
+    );
+
+    preview.setAttribute('stroke', '#5145e5');
+    preview.setAttribute('stroke-width', '2');
+    preview.setAttribute('stroke-dasharray', '5,5');
+    preview.setAttribute('fill', 'none');
+
+    svg.appendChild(preview);
+
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const startX = node.offsetLeft + node.offsetWidth;
+    const startY = node.offsetTop + node.offsetHeight / 2;
+
+    function onMouseMove(moveEvent) {
+      const mouseX = moveEvent.clientX - canvasRect.left;
+      const mouseY = moveEvent.clientY - canvasRect.top;
+
+      preview.setAttribute(
+        'd',
+        `M ${startX} ${startY} L ${mouseX} ${mouseY}`
+      );
+    }
+
+    function onMouseUp(upEvent) {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      preview.remove();
+
+      const target = document.elementFromPoint(
+        upEvent.clientX,
+        upEvent.clientY
+      )?.closest('.canvas-node');
+
+      if (target && target !== node && canvas.contains(target)) {
+        drawConnection(node, target);
+      }
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+
+  return node;
+}
+
+export function initNodes() {
+  const boxes = document.querySelectorAll('.box-item');
+  const canvas = document.getElementById('canvas');
+  const searchBox = document.getElementById('search-box');
+
+  if (!canvas) return;
+
+  initializeKeyboardShortcuts();
+
+  // Search box.
+  if (searchBox) {
+    searchBox.addEventListener('input', (event) => {
+      const term = event.target.value.toLowerCase();
+
+      boxes.forEach(box => {
+        box.style.display =
+          box.textContent.toLowerCase().includes(term)
+            ? 'flex'
+            : 'none';
+      });
     });
+  }
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Delete' && path.getAttribute("stroke") === "#ff4444") {
-            path.remove();
-        }
+  // Drag from box library.
+  boxes.forEach(box => {
+    box.addEventListener('dragstart', (event) => {
+      event.dataTransfer.setData(
+        'text/plain',
+        box.textContent.trim()
+      );
     });
+  });
 
-    svg.appendChild(path);
+  canvas.addEventListener('dragover', (event) => {
+    event.preventDefault();
+  });
 
-    // Right-click se delete
-    path.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        path.remove();
-    });
+  // Drop a new node.
+  canvas.addEventListener('drop', (event) => {
+    event.preventDefault();
 
-    // Nodes ke sath connect karo
-    if (!node1.connections) node1.connections = [];
-    if (!node2.connections) node2.connections = [];
-    
-    node1.connections.push({ path: path, otherNode: node2, isSource: true });
-    node2.connections.push({ path: path, otherNode: node1, isSource: false });
+    const boxName = getBoxName(
+      event.dataTransfer.getData('text/plain')
+    );
+
+    if (!boxName) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = Math.max(0, event.clientX - rect.left);
+    const y = Math.max(0, event.clientY - rect.top);
+
+    createNode(boxName, canvas, x, y);
+
+    const hint = canvas.querySelector('.canvas-hint');
+
+    if (hint) hint.style.display = 'none';
+  });
 }
