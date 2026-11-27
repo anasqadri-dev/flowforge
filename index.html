@@ -6,20 +6,21 @@
     <meta name="description" content="FlowForge - A browser-based visual workflow automation platform.">
     <title>FlowForge | Workflow Automation</title>
     <link rel="stylesheet" href="src/css/app-shell.css">
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
 </head>
 
 <body>
     <!-- Application Sidebar -->
     <aside class="sidebar">
-        <h2>FlowForge</h2>
+        <h2 class="brand"><i data-lucide="workflow" aria-hidden="true"></i> FlowForge</h2>
         <nav aria-label="Main navigation">
-            <a href="#dashboard" class="active">Dashboard</a>
-            <a href="#builder" >Builder</a>
-            <a href="#runs">Runs</a>
-            <a href="#templates" data-coming-soon>Templates</a>
-            <a href="#settings" data-coming-soon>Settings</a>
+            <a href="#dashboard" class="active"><i data-lucide="layout-dashboard" aria-hidden="true"></i> Dashboard</a>
+            <a href="#builder"><i data-lucide="workflow" aria-hidden="true"></i> Builder</a>
+            <a href="#runs"><i data-lucide="history" aria-hidden="true"></i> Runs</a>
+            <a href="#templates"><i data-lucide="gallery-vertical" aria-hidden="true"></i> Templates</a>
+            <a href="#settings"><i data-lucide="settings" aria-hidden="true"></i> Settings</a>
         </nav>
-        <button type="button" id="theme-toggle">Change Theme</button>
+        <button type="button" id="theme-toggle"><i data-lucide="moon" aria-hidden="true"></i><span>Change Theme</span></button>
     </aside>
 
     <!-- Main Application Content -->
@@ -44,8 +45,8 @@
 
         <!-- Quick Actions -->
         <section class="quick-actions">
-            <a href="#builder" class="btn-primary" data-coming-soon>+ New Workflow</a>
-            <a href="#templates" class="btn" data-coming-soon>Browse Templates</a>
+            <a href="#builder" class="btn-primary"><i data-lucide="plus" aria-hidden="true"></i> New Workflow</a>
+            <a href="#templates" class="btn"><i data-lucide="layers" aria-hidden="true"></i> Browse Templates</a>
         </section>
 
         <!-- Recent Workflow Runs -->
