@@ -182,6 +182,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
                     throw new Error('Loop count must be between 1 and 100.');
                 }
                 const bodyEdge = chooseLoopBodyEdge(outgoing);
+                const continuationEdge = outgoing.find(edge => edge !== bodyEdge && !['body', 'loop', 'repeat'].includes(String(edge.branch || edge.sourceHandle || '').toLowerCase()));
                 if (!bodyEdge) {
                     context[node.id] = { ...output, completedIterations: 0 };
                     currentId = null;
@@ -198,7 +199,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
                 }
                 region.body.forEach(item => executed.add(item.id));
                 context[node.id] = { ...output, completedIterations: count };
-                currentId = region.continuationId;
+                currentId = region.continuationId || continuationEdge?.to || null;
                 if (currentId && bodyIds.has(currentId)) currentId = null;
                 continue;
             }
