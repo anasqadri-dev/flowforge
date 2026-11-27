@@ -73,13 +73,19 @@ export function getExecutionOrder(nodes, connections) {
 }
 
 function chooseConditionEdge(edges, result) {
-    const explicit = edges.find(edge => {
-        const branch = String(edge.branch || edge.sourceHandle || '').toLowerCase();
-        return result
-            ? ['true', 'yes', 'success'].includes(branch)
-            : ['false', 'no', 'failure'].includes(branch);
-    });
-    if (explicit) return explicit;
+    const labels = edges.map(edge => String(edge.branch || edge.sourceHandle || '').toLowerCase());
+    const hasExplicitLabels = labels.some(label =>
+        ['true', 'yes', 'success', 'false', 'no', 'failure'].includes(label)
+    );
+
+    if (hasExplicitLabels) {
+        const accepted = result
+            ? ['true', 'yes', 'success']
+            : ['false', 'no', 'failure'];
+        return edges.find(edge => accepted.includes(
+            String(edge.branch || edge.sourceHandle || '').toLowerCase()
+        )) || null;
+    }
 
     // The current Builder exposes an unlabeled output. Until it supports
     // labeled handles, the first outgoing edge represents true and the second false.
