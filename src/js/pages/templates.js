@@ -223,7 +223,7 @@ export async function renderTemplatesPage(container) {
 
       state.workflowId = null;
       state.workflowName = template.name;
-      state.createdAt = new Date().toISOString();
+      state.createdAt = Date.now();
 
       replaceWorkflowState({
         nodes: structuredClone(template.nodes),
@@ -287,7 +287,8 @@ export async function renderTemplatesPage(container) {
   container.querySelectorAll('.delete-template')
     .forEach(button => {
       button.addEventListener('click', async () => {
-        if (!confirm('Delete this template?')) return;
+        const preferences = await getSetting('preferences') || { confirmDelete: true };
+        if (preferences.confirmDelete !== false && !confirm('Delete this template?')) return;
 
         const templates =
           await getSetting('customTemplates') || [];
