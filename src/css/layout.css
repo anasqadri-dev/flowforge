@@ -6,6 +6,7 @@ body {
 .sidebar {
     width: var(--sidebar-width);
     min-width: var(--sidebar-width);
+    flex: 0 0 var(--sidebar-width);
     min-height: 100vh;
 
     display: flex;
@@ -20,6 +21,10 @@ body {
 }
 
 .sidebar h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
     color: var(--color-primary);
     font-size: var(--font-size-xl);
     font-weight: 750;
@@ -28,8 +33,15 @@ body {
     padding-left: var(--space-2);
 }
 
+.sidebar h2 [data-lucide] {
+    width: 25px;
+    height: 25px;
+    flex: 0 0 auto;
+}
+
 .sidebar nav {
     display: flex;
+    flex-direction: column;
     flex-direction: column;
     gap: var(--space-2);
 }
