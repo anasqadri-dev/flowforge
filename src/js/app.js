@@ -4,10 +4,11 @@ import { showNotification } from './components/notifications.js';
 import { initializeSidebar } from './components/sidebar.js';
 import { initializeTheme } from './core/theme.js';
 import { initializeNavigation } from './core/navigation.js';
-import { state } from './core/state.js';
+import { state, initializeHistory } from './core/state.js';
 
 function initializeApp() {
     console.info('Initializing FlowForge.');
+    initializeHistory();
 
     initializeTheme().catch(error => console.error('Theme initialization failed:', error));
 
