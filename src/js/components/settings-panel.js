@@ -226,7 +226,7 @@ export function renderSettingsPanel(boxName, config = {}) {
           class="close-settings"
           aria-label="Close settings"
         >
-          ✕
+          <i data-lucide="panel-right-close" aria-hidden="true"></i>
         </button>
       </div>
 
