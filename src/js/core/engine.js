@@ -56,19 +56,33 @@ function validateGraph(nodes, connections) {
 
 export function getExecutionOrder(nodes, connections) {
     const { nodeMap, adjacency, reverse, start } = validateGraph(nodes, connections);
-    const order = [];
-    const visited = new Set();
+    const reachable = new Set();
     const pending = [start.id];
-
     while (pending.length) {
-        const id = pending.shift();
-        if (visited.has(id)) continue;
-        visited.add(id);
-        order.push(nodeMap.get(id));
+        const id = pending.pop();
+        if (reachable.has(id)) continue;
+        reachable.add(id);
         for (const edge of adjacency.get(id)) pending.push(edge.to);
     }
 
-    if (order.length === 1 && adjacency.get(start.id).length === 0) return order;
+    const indegree = new Map([...reachable].map(id => [id, 0]));
+    for (const id of reachable) {
+        for (const edge of adjacency.get(id)) {
+            if (reachable.has(edge.to)) indegree.set(edge.to, indegree.get(edge.to) + 1);
+        }
+    }
+
+    const queue = [...reachable].filter(id => indegree.get(id) === 0);
+    const order = [];
+    while (queue.length) {
+        const id = queue.shift();
+        order.push(nodeMap.get(id));
+        for (const edge of adjacency.get(id)) {
+            if (!reachable.has(edge.to)) continue;
+            indegree.set(edge.to, indegree.get(edge.to) - 1);
+            if (indegree.get(edge.to) === 0) queue.push(edge.to);
+        }
+    }
     return order;
 }
 
