@@ -146,11 +146,13 @@ function openSettings(node, boxName) {
 
   container.style.display = 'block';
   container.innerHTML = renderSettingsPanel(boxName, config);
+  refreshIcons(container);
 
   const closeButton = document.getElementById('close-settings');
 
   closeButton?.addEventListener('click', () => {
     container.style.display = 'none';
+    container.innerHTML = '';
   });
 
   const form = document.getElementById('settings-form');
@@ -485,7 +487,7 @@ function createNode(
       class="delete-btn"
       aria-label="Delete node"
     >
-      ×
+      <i data-lucide="trash-2" aria-hidden="true"></i>
     </button>
 
     <div class="dot dot-left"></div>
