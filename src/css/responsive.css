@@ -91,22 +91,4 @@
         left: var(--space-4);
         max-width: none;
     }
-
-    /* ===== Drawflow Mobile Fixes ===== */
-    #drawflow-container {
-        min-height: 400px;
-    }
-
-    .builder-container {
-        flex-direction: column;
-        height: auto;
-    }
-
-    .box-menu {
-        width: 100%;
-    }
-
-    #settings-container {
-        width: 100%;
-    }
 }

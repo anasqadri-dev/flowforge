@@ -1,3 +1,4 @@
+// src/js/app.js
 import { showNotification } from "./components/notifications.js";
 import { initializeSidebar } from "./components/sidebar.js";
 import { initializeTheme } from "./core/theme.js";
@@ -7,7 +8,8 @@ function initializeApp() {
   console.log("Initializing FlowForge...");
 
   try {
-    initializeTheme();
+    initializeTheme(); 
+    console.log("✅ Theme init called");
   } catch (err) {
     console.error("❌ Theme failed:", err);
   }
@@ -25,6 +27,7 @@ function initializeApp() {
   }
 }
 
+// DOM load hone ka wait karo
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
