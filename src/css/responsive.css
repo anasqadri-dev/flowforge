@@ -2,7 +2,7 @@
 @media (max-width: 900px) {
 
     :root {
-        --sidebar-width: 230px;
+        --sidebar-width: 210px;
     }
 
     .content {
@@ -28,12 +28,7 @@
     .sidebar {
         width: 100%;
         min-width: 0;
-        flex: 0 0 auto;
-        position: relative;
-        top: auto;
-        height: auto;
         min-height: auto;
-        overflow: visible;
 
         padding: var(--space-4);
 
@@ -59,7 +54,6 @@
     #theme-toggle {
         margin-top: var(--space-3);
         width: 100%;
-        min-height: 48px;
     }
 
     .content {
@@ -96,5 +90,23 @@
         bottom: var(--space-4);
         left: var(--space-4);
         max-width: none;
+    }
+
+    /* ===== Drawflow Mobile Fixes ===== */
+    #drawflow-container {
+        min-height: 400px;
+    }
+
+    .builder-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .box-menu {
+        width: 100%;
+    }
+
+    #settings-container {
+        width: 100%;
     }
 }

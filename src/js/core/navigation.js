@@ -6,146 +6,86 @@ import { loadFromLocal, saveToLocal } from '../components/persistence.js';
 import { setupConnectionGuard } from '../components/connections.js';
 import { copySelectedNode, pasteNode } from '../components/clipboard.js';
 
-import { renderRuns, initRuns } from '../pages/runs.js';
-import { renderTemplatesPage } from '../pages/templates.js';
-import { renderSettingsPage } from '../pages/settings.js';
-import { refreshIcons } from './icons.js';
-import { getWorkflows, getRuns } from './database.js';
-
 let historyManager = null;
 let builderInitialized = false;
-let routeRequest = 0;
 
-function escapeHTML(value = '') {
-    return String(value).replace(/[&<>"']/g, char => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    })[char]);
+export function initializeNavigation(showNotification) {
+  const upcomingLinks = document.querySelectorAll("[data-coming-soon]");
+  upcomingLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      showNotification(`${link.textContent.trim()} is coming soon!`);
+    });
+  });
 }
 
-function renderDashboard() {
-    return `
-        <h1>Dashboard</h1>
-        <section class="stats-grid">
-            <article class="stat-card"><h3 id="stat-workflows">0</h3><p>Workflows</p></article>
-            <article class="stat-card"><h3 id="stat-runs">0</h3><p>Total Runs</p></article>
-            <article class="stat-card"><h3 id="stat-success">0%</h3><p>Success Rate</p></article>
-        </section>
-        <section class="quick-actions">
-            <a href="#builder" class="btn-primary"><i data-lucide="plus" aria-hidden="true"></i> New Workflow</a>
-            <a href="#templates" class="btn"><i data-lucide="layers" aria-hidden="true"></i> Browse Templates</a>
-        </section>
-        <section><h2>Recent Runs</h2>
-            <ul id="recent-runs" class="run-list"><li class="empty">No runs yet — create a workflow to get started.</li></ul>
-        </section>`;
-}
+function handleRoute() {
+  if (window.location.hash !== '#builder') {
+    builderInitialized = false;
+    return;
+  }
 
-async function loadDashboardData() {
-    const [workflows, runs] = await Promise.all([getWorkflows(), getRuns()]);
-    const workflowCount = document.getElementById('stat-workflows');
-    const runCount = document.getElementById('stat-runs');
-    const successRate = document.getElementById('stat-success');
-    if (!workflowCount || !runCount || !successRate) return;
+  const content = document.querySelector('.content');
+  if (!content) return;
+  if (builderInitialized) return;
 
-    workflowCount.textContent = workflows.length;
-    runCount.textContent = runs.length;
-    const successful = runs.filter(run => run.status === 'success').length;
-    successRate.textContent = runs.length ? `${Math.round(successful / runs.length * 100)}%` : '0%';
+  content.innerHTML = renderBuilder();
+  builderInitialized = true;
 
-    const recent = document.getElementById('recent-runs');
-    if (!recent) return;
-    recent.innerHTML = runs.slice(0, 5).map(run => `
-        <li class="dashboard-run-item">
-            <div><strong>${escapeHTML(run.workflowName || 'Workflow Execution')}</strong>
-            <p>${new Date(run.startedAt).toLocaleString()}</p></div>
-            <span class="run-status ${escapeHTML(run.status)}">${escapeHTML(String(run.status || '').toUpperCase())}</span>
-        </li>`
-    ).join('') || '<li class="empty">No runs yet — create a workflow to get started.</li>';
-}
-
-function initializeBuilder() {
+  setTimeout(() => {
     const editor = initDrawflow();
-    if (!editor) return;
+    if (!editor) {
+      builderInitialized = false;
+      return;
+    }
 
     loadFromLocal(editor);
+
     historyManager = new WorkflowHistoryManager();
     historyManager.push(editor);
     historyManager.bindKeyboard(editor);
+
     setupConnectionGuard(editor);
     initNodes();
 
     editor.on('nodeCreated nodeRemoved connectionCreated connectionRemoved nodeMoved nodeDataChanged', () => {
-        if (historyManager && historyManager._locked) return;
-        if (historyManager) historyManager.push(editor);
-        saveToLocal(editor);
+      if (historyManager && historyManager._locked) return;
+      if (historyManager) historyManager.push(editor);
+      saveToLocal(editor);
     });
 
-    if (!window.__flowforgeClipboardShortcuts) {
-        window.__flowforgeClipboardShortcuts = true;
-        document.addEventListener('keydown', event => {
-            if (event.target.matches('input, textarea, select, button')) return;
-            if (!(event.ctrlKey || event.metaKey)) return;
+    document.addEventListener('keydown', (e) => {
+      if (e.target.matches('input, textarea, select')) return;
+      const isCtrl = e.ctrlKey || e.metaKey;
+      if (!isCtrl) return;
 
-            if (event.key.toLowerCase() === 'c') {
-                if (copySelectedNode(editor)) event.preventDefault();
-            } else if (event.key.toLowerCase() === 'v') {
-                event.preventDefault();
-                const newId = pasteNode(editor);
-                if (newId) {
-                    historyManager?.push(editor);
-                    saveToLocal(editor);
-                }
-            }
-        });
-    }
-}
-
-export function initializeNavigation(showNotification) {
-    async function handleRoute() {
-        const requestId = ++routeRequest;
-        const route = window.location.hash || '#dashboard';
-        const content = document.querySelector('.content');
-        if (!content) return;
-
-        if (route !== '#builder') builderInitialized = false;
-
-        try {
-            switch (route) {
-                case '#dashboard':
-                    content.innerHTML = renderDashboard();
-                    loadDashboardData().catch(error => console.error('Dashboard data could not be loaded:', error));
-                    break;
-                case '#builder':
-                    if (builderInitialized) return;
-                    content.innerHTML = renderBuilder();
-                    builderInitialized = true;
-                    requestAnimationFrame(() => {
-                        if (requestId === routeRequest) initializeBuilder();
-                    });
-                    break;
-                case '#runs':
-                    content.innerHTML = renderRuns();
-                    requestAnimationFrame(() => {
-                        if (requestId === routeRequest) initRuns();
-                    });
-                    break;
-                case '#templates':
-                    await renderTemplatesPage(content);
-                    break;
-                case '#settings':
-                    await renderSettingsPage(content);
-                    break;
-                default:
-                    window.location.hash = '#dashboard';
-                    return;
-            }
-
-            if (requestId === routeRequest) refreshIcons();
-        } catch (error) {
-            console.error('Navigation failed:', error);
-            showNotification('Unable to open this page. Check the browser console for details.');
+      if (e.key === 'c') {
+        e.preventDefault();
+        if (copySelectedNode(editor)) {
+          const notif = document.getElementById('notification');
+          if (notif) {
+            notif.textContent = 'Node copied';
+            notif.classList.add('show');
+            setTimeout(() => notif.classList.remove('show'), 2000);
+          }
         }
-    }
-
-    window.addEventListener('hashchange', handleRoute);
-    handleRoute();
+      } else if (e.key === 'v') {
+        e.preventDefault();
+        const newId = pasteNode(editor);
+        if (newId) {
+          if (historyManager && !historyManager._locked) historyManager.push(editor);
+          saveToLocal(editor);
+          const notif = document.getElementById('notification');
+          if (notif) {
+            notif.textContent = 'Node pasted';
+            notif.classList.add('show');
+            setTimeout(() => notif.classList.remove('show'), 2000);
+          }
+        }
+      }
+    });
+  }, 0);
 }
+
+window.addEventListener('hashchange', handleRoute);
+window.addEventListener('DOMContentLoaded', handleRoute);
