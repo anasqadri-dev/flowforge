@@ -6,7 +6,7 @@
 
 Users can drag workflow boxes onto a visual canvas, connect them to define execution order, configure their behavior, and execute the entire workflow through a built-in JavaScript execution engine.
 
-The application runs entirely in the browser and uses IndexedDB for local data persistence. No backend server, external database, or frontend framework is required.
+The application runs entirely in the browser and uses IndexedDB for local data persistence. Timer-based workflows execute only while the application tab remains open. No backend server, external database, or frontend framework is required. The interface uses Lucide SVG icons instead of emoji-based interface elements.
 
 ---
 
@@ -57,6 +57,7 @@ The platform provides a visual workflow builder where users can:
 | CSS3                                    | Styling and responsive interface          |
 | Vanilla JavaScript                      | Application logic and interactions        |
 | SVG                                     | Workflow connections and visual rendering |
+| Lucide Icons                            | Consistent interface icons (CDN)            |
 | IndexedDB                               | Local browser persistence                 |
 | HTML Drag and Drop API / Pointer Events | Drag-and-drop interactions                |
 | Git & GitHub                            | Version control and collaboration         |
@@ -146,7 +147,7 @@ To maintain a clean and collaborative codebase:
 
 - Develop a functional visual workflow editor.
 - Implement a browser-based workflow execution engine.
-- Support configurable workflow actions and conditions.
+- Support configurable workflow actions, conditional paths, and bounded loop bodies.
 - Provide reliable local persistence.
 - Maintain a responsive and accessible user interface.
 - Demonstrate practical Web Engineering concepts.
