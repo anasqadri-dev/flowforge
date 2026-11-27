@@ -2,6 +2,7 @@ import { state } from '../core/state.js';
 import { saveSetting, getSetting } from '../core/database.js';
 import { saveCurrentWorkflow } from '../core/persistence.js';
 import { showNotification } from '../components/notifications.js';
+import { refreshIcons } from '../core/icons.js';
 
 const BUILT_IN_TEMPLATES = [
   {
@@ -172,7 +173,7 @@ export async function renderTemplatesPage(container) {
         ${templates.map(template => `
           <article class="template-card">
 
-            <div class="template-card-icon">⚡</div>
+            <div class="template-card-icon"><i data-lucide="zap" aria-hidden="true"></i></div>
 
             <span class="template-category">
               ${escapeHTML(template.category)}
@@ -209,6 +210,8 @@ export async function renderTemplatesPage(container) {
 
     </section>
   `;
+
+  refreshIcons(container);
 
   container.querySelectorAll('.use-template').forEach(button => {
     button.addEventListener('click', async () => {
