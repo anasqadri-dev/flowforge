@@ -6,6 +6,7 @@ import { state } from '../core/state.js';
 import { runWorkflow } from '../core/engine.js';
 import { refreshIcons } from '../core/icons.js';
 import { showNotification } from './notifications.js';
+import { getSetting } from '../core/database.js';
 
 function initializeRunButton() {
   const runButton = document.getElementById('run-workflow');
@@ -536,8 +537,10 @@ function createNode(
   });
 
   // Delete node and all associated connections.
-  node.querySelector('.delete-btn').addEventListener('click', (event) => {
+  node.querySelector('.delete-btn').addEventListener('click', async (event) => {
     event.stopPropagation();
+    const preferences = await getSetting('preferences') || { confirmDelete: true };
+    if (preferences.confirmDelete !== false && !window.confirm('Delete this node and its connections?')) return;
 
     if (node.connections) {
       [...node.connections].forEach(connection => {
