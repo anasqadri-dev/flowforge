@@ -46,6 +46,14 @@ The application runs entirely in the browser. It does not require a backend serv
 - JSON workflow import and export.
 - 16 built-in, practical workflow templates and user-created templates.
 - Light and dark themes.
+- Step debugger with pause, resume, single-step execution, cancellation, live variable inspection, and animated node/connection feedback.
+- Configurable retry attempts and recovery-node routing for failed actions.
+- Global variables and Development/Testing/Production environment profiles.
+- CSV parsing/generation, browser-selected file input, generated file downloads, and reusable sub-workflows.
+- Local scheduled runs while the browser tab remains open.
+- Workflow duplication, up to 30 saved versions per workflow, and version restoration.
+- Application backup/restore for workflows, run history, settings, variables, environments, schedules, and versions (templates are excluded).
+- Workflow Showcase, one-click Demo Mode, interactive tutorials, execution analytics, and CSV/printable PDF reports.
 - Responsive application layout.
 - Text-only FlowForge sidebar wordmark and a custom SVG browser favicon.
 
@@ -117,6 +125,8 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 │       │   ├── settings-panel.js
 │       │   └── sidebar.js
 │       ├── core/
+│       │   ├── advanced.js
+│       │   ├── backup.js
 │       │   ├── database.js
 │       │   ├── engine.js
 │       │   ├── handlers.js
@@ -127,7 +137,10 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 │       │   └── theme.js
 │       └── pages/
 │           ├── builder.js
+│           ├── analytics.js
 │           ├── logs.js
+│           ├── showcase.js
+│           ├── tutorials.js
 │           ├── runs.js
 │           ├── settings.js
 │           └── templates.js
