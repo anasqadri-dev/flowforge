@@ -159,7 +159,7 @@ export function exportWorkflow() {
     }
 }
 
-export function validateWorkflow(workflow, { requireStart = false } = {}) {
+export function validateWorkflow(workflow, { requireStart = false, strictConnections = false } = {}) {
     if (!workflow || typeof workflow !== 'object' ||
         !Array.isArray(workflow.nodes) || !Array.isArray(workflow.connections)) {
         throw new Error('Invalid workflow file structure.');
@@ -192,38 +192,40 @@ export function validateWorkflow(workflow, { requireStart = false } = {}) {
 
         const sourceNode = nodeById.get(connection.from);
         const targetNode = nodeById.get(connection.to);
-        if (['Manual Start', 'Timer (Schedule)'].includes(targetNode.type)) {
-            throw new Error('Start nodes cannot receive incoming connections.');
-        }
-        if (['Send Notification', 'Write to Log'].includes(sourceNode.type)) {
-            throw new Error('Output nodes cannot have outgoing connections.');
-        }
-
         const key = `${connection.from}->${connection.to}`;
         if (edges.has(key)) throw new Error('Workflow contains duplicate connections.');
         edges.add(key);
 
-        const outgoing = outgoingById.get(connection.from);
-        if (sourceNode.type === 'Condition') {
-            const port = connection.sourceHandle || (connection.branch === 'false' ? 'output_2' : 'output_1');
-            if (!['output_1', 'output_2'].includes(port)) {
-                throw new Error('Condition connections must use a valid output port.');
+        if (strictConnections) {
+            if (['Manual Start', 'Timer (Schedule)'].includes(targetNode.type)) {
+                throw new Error('Start nodes cannot receive incoming connections.');
             }
-            if (connection.branch && connection.branch !== (port === 'output_2' ? 'false' : 'true')) {
-                throw new Error('Condition branch labels do not match their output ports.');
+            if (['Send Notification', 'Write to Log'].includes(sourceNode.type)) {
+                throw new Error('Output nodes cannot have outgoing connections.');
             }
-            const portKey = `${connection.from}:${port}`;
-            if (conditionPorts.has(portKey)) {
-                throw new Error('Each Condition output port can have only one connection.');
+
+            const outgoing = outgoingById.get(connection.from);
+            if (sourceNode.type === 'Condition') {
+                const port = connection.sourceHandle || (connection.branch === 'false' ? 'output_2' : 'output_1');
+                if (!['output_1', 'output_2'].includes(port)) {
+                    throw new Error('Condition connections must use a valid output port.');
+                }
+                if (connection.branch && connection.branch !== (port === 'output_2' ? 'false' : 'true')) {
+                    throw new Error('Condition branch labels do not match their output ports.');
+                }
+                const portKey = `${connection.from}:${port}`;
+                if (conditionPorts.has(portKey)) {
+                    throw new Error('Each Condition output port can have only one connection.');
+                }
+                conditionPorts.add(portKey);
+            } else if (outgoing.length > 0) {
+                throw new Error('Ordinary nodes can have only one outgoing connection.');
             }
-            conditionPorts.add(portKey);
-        } else if (outgoing.length > 0) {
-            throw new Error('Ordinary nodes can have only one outgoing connection.');
+            outgoing.push(connection);
         }
-        outgoing.push(connection);
     }
     const starts = workflow.nodes.filter(node => ['Manual Start', 'Timer (Schedule)'].includes(node.type));
-    if (starts.length > 1 || (requireStart && starts.length !== 1)) {
+    if ((strictConnections && starts.length > 1) || (requireStart && starts.length !== 1)) {
         throw new Error('Workflow must contain exactly one start node.');
     }
     const indegree = new Map(workflow.nodes.map(node => [node.id, 0]));
@@ -240,7 +242,7 @@ async function importWorkflow(file) {
     try {
         if (!file || file.size > 5 * 1024 * 1024) throw new Error('Workflow file must be smaller than 5 MB.');
         const workflow = JSON.parse(await file.text());
-        validateWorkflow(workflow, { requireStart: true });
+        validateWorkflow(workflow, { requireStart: true, strictConnections: true });
 
         state.workflowId = crypto.randomUUID();
         state.workflowName = String(workflow.name || 'Imported Workflow').slice(0, 100);
