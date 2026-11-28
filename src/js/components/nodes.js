@@ -191,6 +191,92 @@ function setupDrawflowEvents(editor) {
     });
 }
 
+
+let executionStepCount = 0;
+let executionCompletedCount = 0;
+let executionListenersBound = false;
+
+function bindExecutionMonitor() {
+    if (executionListenersBound) return;
+    executionListenersBound = true;
+
+    const steps = document.getElementById('execution-steps');
+    const summary = document.getElementById('execution-summary');
+    const status = document.getElementById('execution-status');
+    const progress = document.getElementById('execution-progress-bar');
+    const finalContext = document.getElementById('execution-final-context');
+    if (!steps) return;
+
+    document.addEventListener('flowforge:workflow-started', event => {
+        executionStepCount = event.detail.totalSteps || 0;
+        executionCompletedCount = 0;
+        steps.replaceChildren();
+        summary.textContent = 'Preparing ' + executionStepCount + ' workflow steps...';
+        status.textContent = 'RUNNING';
+        status.className = 'run-status running';
+        progress.style.width = '0%';
+        finalContext.textContent = 'Workflow is running...';
+    });
+
+    document.addEventListener('flowforge:step-started', event => {
+        const detail = event.detail;
+        const item = document.createElement('li');
+        item.className = 'execution-step running';
+        item.dataset.nodeId = detail.nodeId;
+        const heading = document.createElement('div');
+        heading.className = 'execution-step-heading';
+        const name = document.createElement('strong');
+        name.textContent = detail.type + (detail.iteration ? ' · iteration ' + detail.iteration : '');
+        const badge = document.createElement('span');
+        badge.className = 'step-state';
+        badge.textContent = 'RUNNING';
+        heading.append(name, badge);
+        const output = document.createElement('pre');
+        output.className = 'execution-step-output';
+        output.textContent = 'Executing...';
+        item.append(heading, output);
+        steps.append(item);
+        summary.textContent = 'Currently running: ' + detail.type;
+        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    document.addEventListener('flowforge:step-completed', event => {
+        const detail = event.detail;
+        const candidates = [...steps.querySelectorAll('.execution-step')];
+        const item = candidates.reverse().find(element => element.dataset.nodeId === detail.nodeId
+            && element.classList.contains('running'));
+        if (!item) return;
+        item.classList.remove('running');
+        item.classList.add(detail.status);
+        const badge = item.querySelector('.step-state');
+        badge.textContent = detail.status.toUpperCase();
+        const output = item.querySelector('.execution-step-output');
+        output.textContent = detail.status === 'error'
+            ? detail.error
+            : JSON.stringify(detail.output ?? {}, null, 2);
+        executionCompletedCount++;
+        const percent = executionStepCount ? Math.min(100, executionCompletedCount / executionStepCount * 100) : 100;
+        progress.style.width = percent + '%';
+        summary.textContent = executionCompletedCount + ' of ' + executionStepCount + ' steps completed';
+    });
+
+    document.addEventListener('flowforge:workflow-completed', event => {
+        const result = event.detail;
+        status.textContent = result.status === 'success' ? 'SUCCESS' : 'FAILED';
+        status.className = 'run-status ' + (result.status === 'success' ? 'success' : 'error');
+        summary.textContent = (result.status === 'success' ? 'Workflow completed' : 'Workflow stopped: ' + result.error)
+            + ' · ' + result.duration + ' ms';
+        progress.style.width = '100%';
+        finalContext.textContent = JSON.stringify(result.finalContext || {}, null, 2);
+        if (!result.steps?.length && result.error) {
+            const item = document.createElement('li');
+            item.className = 'execution-step error';
+            item.textContent = result.error;
+            steps.append(item);
+        }
+    });
+}
+
 function initializeRunButton() {
     const button = document.getElementById('run-workflow');
     if (!button) return;
@@ -213,6 +299,7 @@ function initializeRunButton() {
             }
 
             await saveCurrentWorkflow(false);
+            document.dispatchEvent(new CustomEvent('flowforge:workflow-started', { detail: { totalSteps: state.nodes.length } }));
             const result = await runWorkflow(state.nodes, state.connections, {}, {
                 workflowId: state.workflowId, workflowName: state.workflowName
             });
@@ -313,6 +400,7 @@ export function initNodes() {
         refreshIcons(container);
     });
     setupDrawflowEvents(editor);
+    bindExecutionMonitor();
     initializeKeyboardShortcuts();
     initializeRunButton();
     if (!window.__flowforgeDrawflowSyncBound) {
