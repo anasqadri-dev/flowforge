@@ -77,6 +77,9 @@ The application runs entirely in the browser. It does not require a backend serv
 
 ```text
 .
+├── .github/
+│   └── workflows/
+│       └── validate.yml
 ├── index.html
 ├── src/
 │   ├── css/
