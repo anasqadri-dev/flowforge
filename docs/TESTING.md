@@ -5,7 +5,7 @@ Run these checks in a modern desktop browser using the local static server or th
 ## 1. Application shell
 
 - [ ] Open the application and confirm the Dashboard loads without console errors.
-- [ ] Navigate between Dashboard, Builder, Runs, Templates, and Settings using the sidebar.
+- [ ] Navigate between Dashboard, Builder, Runs, Logs, Templates, and Settings using the sidebar.
 - [ ] Create a new workflow from the Dashboard while another workflow is active; confirm the previous workflow is preserved and the new workflow is empty.
 - [ ] Open an older saved workflow from the Dashboard and confirm its nodes, connections, and settings restore.
 - [ ] Confirm the active navigation item follows the current route.
@@ -81,7 +81,19 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Clear all run history and confirm the list and counters update.
 - [ ] Confirm the Dashboard counters and recent-run list match the stored records.
 
-## 6. Templates and settings
+## 6. Execution logs
+
+- [ ] Open Logs from the sidebar and confirm historical Write to Log entries load from IndexedDB.
+- [ ] Run a workflow containing Write to Log and confirm its actual interpolated message appears in Logs after the run is saved.
+- [ ] Open Complete log details and verify workflow name, workflow/run IDs, node ID, status, step duration, workflow duration, and loop iteration when applicable.
+- [ ] Confirm the original configured message template is shown for runs recorded after the Logs feature was added.
+- [ ] Search by message text, workflow name, and node ID; confirm results update correctly.
+- [ ] Filter by successful/failed step status and by today, last 7 days, and last 30 days.
+- [ ] Keep Logs open, run a workflow in another tab or workflow context, and confirm the page refreshes when the run-saved event is received in the same application document.
+- [ ] Delete a run from Run History and confirm its log entries disappear; clear all run history and confirm no run-derived logs remain.
+- [ ] Confirm logs are browser-local and are not synchronized between separate browser profiles or devices.
+
+## 7. Templates and settings
 
 - [ ] Confirm the Templates page lists 16 built-in templates plus any saved custom templates.
 - [ ] Load every built-in template and confirm all nodes, connections, positions, and node configurations appear in Builder.
@@ -93,7 +105,7 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Change theme and preferences, refresh, and confirm they persist.
 - [ ] Clear application data and confirm workflows, runs, and custom templates are removed and the active workflow pointer is cleared.
 
-## 7. Responsive and deployment checks
+## 8. Responsive and deployment checks
 
 - [ ] Test the application at desktop, tablet, and narrow mobile widths.
 - [ ] Confirm the Builder panels stack without horizontal page overflow on mobile.

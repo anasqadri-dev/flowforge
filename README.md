@@ -41,6 +41,7 @@ The application runs entirely in the browser. It does not require a backend serv
 - Workflow execution with sequential steps, conditions, and bounded loop bodies.
 - Variable interpolation between workflow steps.
 - Execution history with step-level inputs, outputs, and errors.
+- Dedicated Logs page with searchable historical `Write to Log` messages, execution metadata, status/date filters, and complete per-entry details.
 - Create multiple workflows, reopen saved workflows from the Dashboard, and automatically save through IndexedDB.
 - JSON workflow import and export.
 - 16 built-in, practical workflow templates and user-created templates.
@@ -87,6 +88,7 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 | M6 — Run History | Execution records, step timelines, outputs, and errors |
 | M7 — Persistence | IndexedDB storage, automatic saving, and JSON import/export |
 | M8 — Templates and Settings | Pre-built workflows and application preferences |
+| Logs — Execution Observability | Historical messages written by workflow nodes, searchable with run, node, status, and timing details |
 
 ## Project structure
 
@@ -125,6 +127,7 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 │       │   └── theme.js
 │       └── pages/
 │           ├── builder.js
+│           ├── logs.js
 │           ├── runs.js
 │           ├── settings.js
 │           └── templates.js
@@ -133,6 +136,7 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 │   └── TESTING.md
 ├── scripts/
 │   ├── validate-box-library.mjs
+│   ├── validate-engine.mjs
 │   ├── validate-notifications.mjs
 │   └── validate-templates.mjs
 ├── LICENSE
@@ -169,7 +173,7 @@ Opening `index.html` directly with a `file://` URL is not recommended because th
 
 ## Testing and known limitations
 
-The repository includes automated JavaScript syntax/import checks, built-in template validation, and box-handler/notification regression checks. Full browser acceptance and end-to-end testing remain manual; verify the scenarios in [docs/TESTING.md](docs/TESTING.md). Before release, verify the scenarios in [docs/TESTING.md](docs/TESTING.md).
+The repository includes automated JavaScript syntax/import checks, built-in template validation, box-handler checks, notification regression checks, and workflow-engine regression checks. Full browser acceptance and end-to-end testing remain manual; verify the scenarios in [docs/TESTING.md](docs/TESTING.md).
 
 - Workflow data is local to the browser profile and is not synchronized across devices.
 - Timer-based workflows require the application tab to remain open.
