@@ -131,6 +131,10 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 ├── docs/
 │   ├── FlowForge_Muhammad-Anas-Qadri_053-24-0016.pdf
 │   └── TESTING.md
+├── scripts/
+│   ├── validate-box-library.mjs
+│   ├── validate-notifications.mjs
+│   └── validate-templates.mjs
 ├── LICENSE
 └── README.md
 ```
