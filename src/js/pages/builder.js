@@ -38,7 +38,7 @@ export function renderBuilder() {
           <button type="button" id="save-workflow">Save</button>
           <button type="button" id="export-workflow">Export JSON</button>
           <button type="button" id="import-workflow">Import JSON</button>
-          <input type="file" id="workflow-file" accept=".json,application/json" hidden><label class="btn" for="workflow-input-file">Choose Input File</label><input type="file" id="workflow-input-file" hidden>
+          <input type="file" id="workflow-file" accept=".json,application/json" hidden><label class="btn" for="workflow-input-file">Choose Input File</label><input type="file" id="workflow-input-file" accept=".txt,.csv,.json,.md,text/plain,text/csv,application/json" hidden>
         </div>
         <button type="button" id="run-workflow" class="btn-primary run-workflow-btn"><i data-lucide="play" aria-hidden="true"></i> Run Workflow</button>
         <section id="execution-monitor" class="execution-monitor" aria-live="polite" aria-label="Live workflow execution">
