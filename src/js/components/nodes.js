@@ -196,19 +196,28 @@ let executionStepCount = 0;
 let executionCompletedCount = 0;
 let executionListenersBound = false;
 
+function getExecutionMonitorElements() {
+    return {
+        steps: document.getElementById('execution-steps'),
+        summary: document.getElementById('execution-summary'),
+        status: document.getElementById('execution-status'),
+        progress: document.getElementById('execution-progress-bar'),
+        finalContext: document.getElementById('execution-final-context')
+    };
+}
+
 function bindExecutionMonitor() {
+    // Bind once to the document, but resolve the Builder elements for every
+    // event. The Builder is re-rendered during SPA navigation, so cached
+    // references become detached and stop receiving visible updates.
     if (executionListenersBound) return;
+    if (!document.getElementById('execution-steps')) return;
     executionListenersBound = true;
 
-    const steps = document.getElementById('execution-steps');
-    const summary = document.getElementById('execution-summary');
-    const status = document.getElementById('execution-status');
-    const progress = document.getElementById('execution-progress-bar');
-    const finalContext = document.getElementById('execution-final-context');
-    if (!steps) return;
-
     document.addEventListener('flowforge:workflow-started', event => {
-        executionStepCount = event.detail.totalSteps || 0;
+        const { steps, summary, status, progress, finalContext } = getExecutionMonitorElements();
+        if (!steps) return;
+        executionStepCount = event.detail?.totalSteps || 0;
         executionCompletedCount = 0;
         steps.replaceChildren();
         summary.textContent = 'Preparing ' + executionStepCount + ' workflow steps...';
@@ -219,14 +228,16 @@ function bindExecutionMonitor() {
     });
 
     document.addEventListener('flowforge:step-started', event => {
-        const detail = event.detail;
+        const { steps, summary } = getExecutionMonitorElements();
+        if (!steps) return;
+        const detail = event.detail || {};
         const item = document.createElement('li');
         item.className = 'execution-step running';
-        item.dataset.nodeId = detail.nodeId;
+        item.dataset.nodeId = detail.nodeId || '';
         const heading = document.createElement('div');
         heading.className = 'execution-step-heading';
         const name = document.createElement('strong');
-        name.textContent = detail.type + (detail.iteration ? ' · iteration ' + detail.iteration : '');
+        name.textContent = (detail.type || 'Workflow step') + (detail.iteration ? ' · iteration ' + detail.iteration : '');
         const badge = document.createElement('span');
         badge.className = 'step-state';
         badge.textContent = 'RUNNING';
@@ -236,36 +247,43 @@ function bindExecutionMonitor() {
         output.textContent = 'Executing...';
         item.append(heading, output);
         steps.append(item);
-        summary.textContent = 'Currently running: ' + detail.type;
+        summary.textContent = 'Currently running: ' + (detail.type || 'workflow step');
         item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
     document.addEventListener('flowforge:step-completed', event => {
-        const detail = event.detail;
+        const { steps, summary, progress } = getExecutionMonitorElements();
+        if (!steps) return;
+        const detail = event.detail || {};
         const candidates = [...steps.querySelectorAll('.execution-step')];
         const item = candidates.reverse().find(element => element.dataset.nodeId === detail.nodeId
             && element.classList.contains('running'));
         if (!item) return;
         item.classList.remove('running');
-        item.classList.add(detail.status);
+        item.classList.add(detail.status === 'error' ? 'error' : 'success');
         const badge = item.querySelector('.step-state');
-        badge.textContent = detail.status.toUpperCase();
+        badge.textContent = String(detail.status || 'success').toUpperCase();
         const output = item.querySelector('.execution-step-output');
         output.textContent = detail.status === 'error'
-            ? detail.error
+            ? (detail.error || 'This step failed.')
             : JSON.stringify(detail.output ?? {}, null, 2);
         executionCompletedCount++;
-        const percent = executionStepCount ? Math.min(100, executionCompletedCount / executionStepCount * 100) : 100;
+        const percent = executionStepCount
+            ? Math.min(100, executionCompletedCount / executionStepCount * 100)
+            : 100;
         progress.style.width = percent + '%';
         summary.textContent = executionCompletedCount + ' of ' + executionStepCount + ' steps completed';
     });
 
     document.addEventListener('flowforge:workflow-completed', event => {
-        const result = event.detail;
-        status.textContent = result.status === 'success' ? 'SUCCESS' : 'FAILED';
-        status.className = 'run-status ' + (result.status === 'success' ? 'success' : 'error');
-        summary.textContent = (result.status === 'success' ? 'Workflow completed' : 'Workflow stopped: ' + result.error)
-            + ' · ' + result.duration + ' ms';
+        const { steps, summary, status, progress, finalContext } = getExecutionMonitorElements();
+        if (!steps) return;
+        const result = event.detail || {};
+        const succeeded = result.status === 'success';
+        status.textContent = succeeded ? 'SUCCESS' : 'FAILED';
+        status.className = 'run-status ' + (succeeded ? 'success' : 'error');
+        summary.textContent = (succeeded ? 'Workflow completed' : 'Workflow stopped: ' + (result.error || 'Unknown error'))
+            + ' · ' + (result.duration ?? 0) + ' ms';
         progress.style.width = '100%';
         finalContext.textContent = JSON.stringify(result.finalContext || {}, null, 2);
         if (!result.steps?.length && result.error) {
@@ -317,7 +335,16 @@ function initializeRunButton() {
             document.dispatchEvent(new CustomEvent('flowforge:workflow-completed', { detail: result }));
         } catch (error) {
             console.error('Workflow execution failed:', error);
-            showNotification('Workflow execution failed.');
+            document.dispatchEvent(new CustomEvent('flowforge:workflow-completed', {
+                detail: {
+                    status: 'error',
+                    error: error.message || 'Workflow execution failed.',
+                    duration: 0,
+                    steps: [],
+                    finalContext: {}
+                }
+            }));
+            showNotification('Workflow execution failed: ' + (error.message || 'Unknown error'));
         } finally {
             button.disabled = false;
             button.innerHTML = '<i data-lucide="play" aria-hidden="true"></i> Run Workflow';
