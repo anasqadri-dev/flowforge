@@ -38,6 +38,9 @@ jobs:
       - name: Test in-app notification delivery
         run: node scripts/validate-notifications.mjs
 
+      - name: Test workflow engine execution
+        run: node scripts/validate-engine.mjs
+
       - name: Verify relative imports
         run: |
           node --input-type=module <<'NODE'
@@ -58,7 +61,7 @@ jobs:
 
           for (const file of files) {
             const source = fs.readFileSync(file, 'utf8');
-            const imports = source.matchAll(/(?:from\s*|import\s*)['"]([^'"]+)['"]/g);
+            const imports = source.matchAll(/(?:from\\s*|import\\s*)['"]([^'"]+)['"]/g);
             for (const match of imports) {
               if (!match[1].startsWith('.')) continue;
               const target = path.resolve(path.dirname(file), match[1]);
@@ -67,7 +70,7 @@ jobs:
           }
 
           if (missing.length) {
-            console.error('Missing relative imports:', missing.join('\n'));
+            console.error('Missing relative imports:', missing.join('\\n'));
             process.exit(1);
           }
           console.log(`Verified relative imports in ${files.length} JavaScript files.`);
