@@ -6,6 +6,7 @@ const drawflowToAppId = new Map();
 
 const nodePorts = {
     'Manual Start': { inputs: 0, outputs: 1 }, 'Timer (Schedule)': { inputs: 0, outputs: 1 },
+    'Read File': { inputs: 0, outputs: 1 },
     'HTTP Request': { inputs: 1, outputs: 1 }, 'Transform Data': { inputs: 1, outputs: 1 },
     'Set Variable': { inputs: 1, outputs: 1 }, 'Wait': { inputs: 1, outputs: 1 },
     'Condition': { inputs: 1, outputs: 2 }, 'Loop': { inputs: 1, outputs: 1 },
@@ -16,7 +17,7 @@ const icons = {
     'Manual Start':'play','Timer (Schedule)':'clock','HTTP Request':'globe',
     'Transform Data':'sliders-horizontal','Set Variable':'variable','Wait':'timer',
     'Condition':'git-branch','Loop':'repeat','Send Notification':'bell','Write to Log':'file-text',
-    'JSON Parse':'braces','JSON Stringify':'code','Merge Data':'combine','Validate JSON':'shield-check',
+    'CSV Parse':'file-spreadsheet','CSV Generate':'file-spreadsheet','Read File':'file-input','Create File':'file-output','Run Sub-workflow':'workflow','JSON Parse':'braces','JSON Stringify':'code','Merge Data':'combine','Validate JSON':'shield-check',
     'Filter Array':'list-filter','Array Length':'list-ordered','Format Text':'text',
     'Replace Text':'replace','Split Text':'scissors','Join Text':'list','Math Operation':'calculator',
     'Random Number':'shuffle','Generate UUID':'fingerprint','Current Date & Time':'calendar-clock',
