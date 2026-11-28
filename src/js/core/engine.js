@@ -152,6 +152,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
         return {
             id: runId, workflowId: metadata.workflowId || null,
             workflowName: metadata.workflowName || 'Untitled Workflow',
+            workflowSnapshot: metadata.workflowSnapshot || null,
             status: 'error', error: error.message, startedAt,
             finishedAt: Date.now(), duration: Date.now() - startedAt,
             steps, finalContext: context
@@ -352,6 +353,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
         initialContext: structuredClone(initialContext),
         workflowId: metadata.workflowId || null,
         workflowName: metadata.workflowName || 'Untitled Workflow',
+        workflowSnapshot: metadata.workflowSnapshot || null,
         status,
         error: errorMessage,
         startedAt,
