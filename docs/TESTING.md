@@ -17,6 +17,13 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Open Builder and confirm the box library, canvas, workflow toolbar, Run button, and settings panel are visible.
 - [ ] Search for a node type and confirm unrelated node types are filtered out.
 - [ ] Drag each available node type onto the canvas.
+- [ ] Confirm the Box Library has 28 node types grouped into Triggers, HTTP & API, Data & JSON, Arrays & Collections, Text, Math & Utilities, and Flow Control.
+- [ ] Run JSON Parse, JSON Stringify, Merge Data, and Validate JSON with valid and invalid input.
+- [ ] Run Filter Array and Array Length with JSON arrays; verify property matching and empty-array behavior.
+- [ ] Run Format Text, Replace Text, Split Text, and Join Text with normal text and interpolated values.
+- [ ] Run Math Operation with each operator; confirm division by zero and invalid operands produce clear errors.
+- [ ] Run Random Number with a fixed minimum/maximum, Generate UUID, and Current Date & Time.
+- [ ] Run URL Encode/Decode and Base64 Encode/Decode, including Unicode text.
 - [ ] Move nodes and confirm their positions remain stable after changing routes and returning to Builder.
 - [ ] Connect a Manual Start to an action node and confirm the connection is visible.
 - [ ] Confirm an ordinary action node cannot create multiple outgoing paths.
