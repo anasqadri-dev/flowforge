@@ -1672,3 +1672,31 @@ textarea:focus-visible, select:focus-visible {
     .logs-search { grid-column: auto; }
     .log-entry { padding: 13px; }
 }
+
+/* Advanced FlowForge features */
+.settings-advanced-tools { display: grid; gap: 22px; margin-top: 22px; }
+.settings-actions, .debugger-controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+.settings-card textarea { box-sizing: border-box; width: 100%; min-height: 110px; margin: 12px 0; padding: 12px; color: var(--color-text-primary); background: var(--color-surface-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font: 13px/1.55 ui-monospace, Consolas, monospace; }
+.settings-card select, .settings-card input[type="datetime-local"] { min-height: 40px; padding: 8px 10px; color: var(--color-text-primary); background: var(--color-surface-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.settings-card kbd { padding: 5px 9px; color: var(--color-text-primary); background: var(--color-surface-secondary); border: 1px solid var(--color-border); border-radius: 6px; }
+.showcase-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.showcase-grid .settings-card { margin: 0; }
+.showcase-grid [data-lucide] { width: 26px; height: 26px; color: var(--color-primary); }
+.showcase-grid h2 { margin: 12px 0 8px; font-size: 18px; }
+.showcase-grid p, .tutorial-card p { color: var(--color-text-secondary); line-height: 1.6; }
+.showcase-grid a { color: var(--color-primary); font-weight: 650; }
+.tutorial-list { display: grid; gap: 12px; margin-bottom: 20px; }
+.tutorial-card label { display: flex; align-items: center; gap: 10px; }
+.tutorial-card p { margin: 10px 0 0 28px; }
+.analytics-bar { height: 16px; overflow: hidden; background: var(--color-surface-secondary); border-radius: 999px; }
+.analytics-bar span { display: block; height: 100%; background: var(--color-success); border-radius: inherit; transition: width .25s ease; }
+.advanced-node-options { margin: 12px 0; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.advanced-node-options summary { color: var(--color-primary); cursor: pointer; font-weight: 650; margin-bottom: 8px; }
+.execution-active { outline: 2px solid var(--color-primary) !important; box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-primary) 18%, transparent); animation: flowforge-node-pulse 1.2s ease-in-out infinite; }
+.execution-done { outline: 1px solid var(--color-success) !important; }
+.execution-failed { outline: 2px solid var(--color-danger) !important; }
+@keyframes flowforge-node-pulse { 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--color-primary) 7%, transparent); } }
+.debugger-controls { justify-content: flex-end; margin: 10px 0; }
+.debugger-controls button:disabled { opacity: .45; cursor: not-allowed; }
+@media (max-width: 900px) { .showcase-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 560px) { .showcase-grid { grid-template-columns: 1fr; } .settings-row { align-items: stretch; flex-direction: column; } .debugger-controls { justify-content: flex-start; } }
