@@ -42,6 +42,7 @@ The application runs entirely in the browser. It does not require a backend serv
 - 16 built-in, practical workflow templates and user-created templates.
 - Light and dark themes.
 - Responsive application layout.
+- Text-only FlowForge sidebar wordmark and a custom SVG browser favicon.
 
 ## Technology stack
 
@@ -80,6 +81,7 @@ The application runs entirely in the browser. It does not require a backend serv
 ├── .github/
 │   └── workflows/
 │       └── validate.yml
+├── favicon.svg
 ├── index.html
 ├── src/
 │   ├── css/
