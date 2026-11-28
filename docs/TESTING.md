@@ -153,3 +153,29 @@ Do not mark the project fully verified until all critical checks pass on the dep
 - [ ] Run Write to Log and confirm its message appears in the Live Execution step output without needing to open DevTools.
 - [ ] Confirm notification delivery still works when native browser notifications are blocked or unsupported.
 - [ ] Confirm repeated notification workflows show a fresh message on every run.
+
+
+## 9. Debugger, backup, and advanced tools
+
+- [ ] Run a workflow and pause it while a step is active; confirm the monitor reports the paused state.
+- [ ] Use Step repeatedly and verify exactly one additional node runs per click; Resume should continue normally.
+- [ ] Cancel a paused workflow and confirm it ends with a cancelled status rather than remaining stuck.
+- [ ] Configure a retry count on an action and confirm retry events appear before a final failure/success.
+- [ ] Configure a recovery node on an action, force the action to fail, and confirm execution continues at the recovery node.
+- [ ] Confirm the live variable inspector displays global, environment, and step-created variables.
+- [ ] Configure global variables and switch environment profiles; confirm active profile values are available through interpolation.
+- [ ] Use CSV Parse with quoted commas and escaped quotes; use CSV Generate and download the generated file.
+- [ ] Choose a local input file, run Read File, and verify the file name and contents appear in step output.
+- [ ] Run Create File and download its output from the execution monitor.
+- [ ] Run a saved workflow through Run Sub-workflow and confirm its result is returned to the parent context.
+- [ ] Duplicate a workflow and confirm the original remains unchanged.
+- [ ] Save multiple versions, restore an earlier version, and confirm nodes/connections are restored.
+- [ ] Schedule a saved workflow for a near-future time; keep the browser tab open and confirm the scheduled run is saved.
+- [ ] Close the tab before a scheduled time and confirm the documentation clearly states background execution is not supported.
+- [ ] Export a CSV report and open the printable report, choosing Save as PDF in the browser print dialog.
+- [ ] Download a complete application backup and inspect that it contains workflows, runs, settings, variables, environments, schedules, and versions but no template payloads.
+- [ ] Restore a valid backup and confirm existing data is replaced only after confirmation and a safety backup is downloaded.
+- [ ] Try malformed JSON, wrong application identifier, unsupported backup version, and oversized backup files; confirm each is rejected without changing stored data.
+- [ ] Launch Demo Mode and confirm it creates a connected three-node sample workflow.
+- [ ] Complete tutorial checkboxes and confirm progress persists after refresh.
+- [ ] Open Analytics and verify totals and averages match Run History.
