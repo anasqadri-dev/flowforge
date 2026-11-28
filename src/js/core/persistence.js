@@ -10,6 +10,16 @@ let saveTimer = null;
 let notificationCallback = null;
 let restorePromise = Promise.resolve();
 
+function readActiveWorkflowId() {
+    try { return localStorage.getItem('flowforge-active-workflow'); }
+    catch (error) { console.warn('Local Storage is unavailable; using IndexedDB workflow ordering.', error); return null; }
+}
+
+function writeActiveWorkflowId(id) {
+    try { localStorage.setItem('flowforge-active-workflow', id); }
+    catch (error) { console.warn('The active workflow pointer could not be stored in Local Storage.', error); }
+}
+
 function notify(message) {
     if (notificationCallback) notificationCallback(message);
     else {
@@ -38,7 +48,7 @@ export async function saveCurrentWorkflow(showMessage = true) {
         await saveWorkflow(workflow);
         state.workflowId = workflow.id;
         state.createdAt = workflow.createdAt;
-        localStorage.setItem('flowforge-active-workflow', workflow.id);
+        writeActiveWorkflowId(workflow.id);
         if (showMessage) notify('Workflow saved successfully.');
         return workflow;
     } catch (error) {
@@ -78,7 +88,7 @@ export async function loadWorkflowById(id) {
 async function restoreLatestWorkflow() {
     try {
         const workflows = await getWorkflows();
-        const activeId = localStorage.getItem('flowforge-active-workflow');
+        const activeId = readActiveWorkflowId();
         const active = activeId ? await getWorkflow(activeId) : null;
         const workflow = active || workflows[0];
         if (workflow) {
