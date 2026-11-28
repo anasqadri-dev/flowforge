@@ -10,6 +10,7 @@ import { showNotification } from '../components/notifications.js';
 import { setTheme } from '../core/theme.js';
 import { state, replaceWorkflowState } from '../core/state.js';
 import { cancelPendingAutoSave } from '../core/persistence.js';
+import { mountSettingsTools } from '../components/settings-tools.js';
 
 export async function renderSettingsPage(container, isCurrent = () => true) {
     const databaseTheme = await getSetting('theme');
@@ -64,6 +65,8 @@ export async function renderSettingsPage(container, isCurrent = () => true) {
             </div>
         </section>
     `;
+
+    await mountSettingsTools(container);
 
     container.querySelector('#app-theme').addEventListener('change', async event => {
         await setTheme(event.target.value);
