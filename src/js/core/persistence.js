@@ -180,14 +180,47 @@ export function validateWorkflow(workflow, { requireStart = false } = {}) {
     }
 
     const edges = new Set();
+    const nodeById = new Map(workflow.nodes.map(node => [node.id, node]));
+    const outgoingById = new Map(workflow.nodes.map(node => [node.id, []]));
+    const conditionPorts = new Set();
+
     for (const connection of workflow.connections) {
         if (!connection || !ids.has(connection.from) || !ids.has(connection.to) ||
             connection.from === connection.to) {
             throw new Error('Workflow contains an invalid connection.');
         }
+
+        const sourceNode = nodeById.get(connection.from);
+        const targetNode = nodeById.get(connection.to);
+        if (['Manual Start', 'Timer (Schedule)'].includes(targetNode.type)) {
+            throw new Error('Start nodes cannot receive incoming connections.');
+        }
+        if (['Send Notification', 'Write to Log'].includes(sourceNode.type)) {
+            throw new Error('Output nodes cannot have outgoing connections.');
+        }
+
         const key = `${connection.from}->${connection.to}`;
         if (edges.has(key)) throw new Error('Workflow contains duplicate connections.');
         edges.add(key);
+
+        const outgoing = outgoingById.get(connection.from);
+        if (sourceNode.type === 'Condition') {
+            const port = connection.sourceHandle || (connection.branch === 'false' ? 'output_2' : 'output_1');
+            if (!['output_1', 'output_2'].includes(port)) {
+                throw new Error('Condition connections must use a valid output port.');
+            }
+            if (connection.branch && connection.branch !== (port === 'output_2' ? 'false' : 'true')) {
+                throw new Error('Condition branch labels do not match their output ports.');
+            }
+            const portKey = `${connection.from}:${port}`;
+            if (conditionPorts.has(portKey)) {
+                throw new Error('Each Condition output port can have only one connection.');
+            }
+            conditionPorts.add(portKey);
+        } else if (outgoing.length > 0) {
+            throw new Error('Ordinary nodes can have only one outgoing connection.');
+        }
+        outgoing.push(connection);
     }
     const starts = workflow.nodes.filter(node => ['Manual Start', 'Timer (Schedule)'].includes(node.type));
     if (starts.length > 1 || (requireStart && starts.length !== 1)) {
