@@ -1,5 +1,11 @@
 import { handlers } from './handlers.js';
 
+function publishExecutionEvent(name, detail) {
+    if (typeof document !== 'undefined') {
+        document.dispatchEvent(new CustomEvent(name, { detail }));
+    }
+}
+
 function validateGraph(nodes, connections) {
     if (!Array.isArray(nodes) || !Array.isArray(connections)) {
         throw new Error('Workflow nodes and connections must be arrays.');
@@ -149,21 +155,27 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
         const started = Date.now();
         const handler = handlers[node.type];
         if (!handler) throw new Error(`No handler found for ${node.type}`);
+        const stepInfo = { runId, nodeId: node.id, type: node.type, iteration };
+        publishExecutionEvent('flowforge:step-started', stepInfo);
         try {
             const output = await handler(node.config || {}, context);
             context[node.id] = output;
-            steps.push({
+            const step = {
                 nodeId: node.id, type: node.type, status: 'success',
                 output, duration: Date.now() - started,
                 ...(iteration !== null ? { iteration } : {})
-            });
+            };
+            steps.push(step);
+            publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step });
             return output;
         } catch (error) {
-            steps.push({
+            const step = {
                 nodeId: node.id, type: node.type, status: 'error',
                 error: error.message, duration: Date.now() - started,
                 ...(iteration !== null ? { iteration } : {})
-            });
+            };
+            steps.push(step);
+            publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step });
             throw error;
         }
     }
