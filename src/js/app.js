@@ -25,8 +25,8 @@ function initializeApp() {
         try {
             const run = {
                 ...event.detail,
-                workflowId: state.workflowId,
-                workflowName: state.workflowName || 'Untitled Workflow'
+                workflowId: event.detail.workflowId ?? state.workflowId,
+                workflowName: event.detail.workflowName || state.workflowName || 'Untitled Workflow'
             };
             await saveRun(run);
             document.dispatchEvent(new CustomEvent('flowforge:run-saved', { detail: run }));
