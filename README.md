@@ -39,7 +39,7 @@ The application runs entirely in the browser. It does not require a backend serv
 - Execution history with step-level inputs, outputs, and errors.
 - Create multiple workflows, reopen saved workflows from the Dashboard, and automatically save through IndexedDB.
 - JSON workflow import and export.
-- 15 built-in, practical workflow templates and user-created templates.
+- 16 built-in, practical workflow templates and user-created templates.
 - Light and dark themes.
 - Responsive application layout.
 
