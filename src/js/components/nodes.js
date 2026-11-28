@@ -10,6 +10,7 @@ import { copySelectedNode, pasteNode } from './clipboard.js';
 
 let keyboardHandlerAttached = false;
 let syncingFromEditor = false;
+let selectedConnection = null;
 
 function getNodeConfig(drawflowNode) {
     return structuredClone(drawflowNode?.data?.config || {});
@@ -136,11 +137,29 @@ function setupDrawflowEvents(editor) {
         }
     });
 
+    editor.on('connectionSelected', connection => {
+        selectedConnection = {
+            output_id: String(connection.output_id),
+            input_id: String(connection.input_id),
+            output_class: connection.output_class,
+            input_class: connection.input_class
+        };
+    });
+
     editor.on('connectionRemoved', connection => {
         if (isImportingDrawflow()) return;
         const from = getAppNodeId(connection.output_id);
         const to = getAppNodeId(connection.input_id);
-        const edge = state.connections.find(item => item.from === from && item.to === to);
+        const edge = state.connections.find(item => item.from === from
+            && item.to === to
+            && (item.sourceHandle || 'output_1') === connection.output_class);
+        if (selectedConnection
+            && selectedConnection.output_id === String(connection.output_id)
+            && selectedConnection.input_id === String(connection.input_id)
+            && selectedConnection.output_class === connection.output_class
+            && selectedConnection.input_class === connection.input_class) {
+            selectedConnection = null;
+        }
         if (edge) {
             syncingFromEditor = true;
             deleteConnection(edge.id);
@@ -148,7 +167,10 @@ function setupDrawflowEvents(editor) {
         }
     });
 
-    editor.on('nodeSelected', id => openSettings(id));
+    editor.on('nodeSelected', id => {
+        selectedConnection = null;
+        openSettings(id);
+    });
     editor.on('click', event => {
         if (!event.target.closest('.drawflow-node')) {
             const panel = document.getElementById('settings-container');
@@ -217,6 +239,18 @@ function initializeKeyboardShortcuts() {
             if (id) showNotification('Node pasted.');
         }
         if (event.key === 'Delete' || event.key === 'Backspace') {
+            if (selectedConnection) {
+                event.preventDefault();
+                const connection = selectedConnection;
+                selectedConnection = null;
+                editor.removeSingleConnection(
+                    connection.output_id,
+                    connection.input_id,
+                    connection.output_class,
+                    connection.input_class
+                );
+                return;
+            }
             const selected = editor.node_selected;
             if (selected) {
                 event.preventDefault();

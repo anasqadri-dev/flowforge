@@ -21,6 +21,9 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Connect a Manual Start to an action node and confirm the connection is visible.
 - [ ] Confirm an ordinary action node cannot create multiple outgoing paths.
 - [ ] Connect both Condition output ports and confirm they are represented as separate true/false branches.
+- [ ] Click a connection line to select it, then press Delete/Backspace; confirm only that connection disappears and the workflow state is updated.
+- [ ] Delete a connection from each Condition output branch and confirm the other branch remains intact.
+- [ ] Confirm deleting a selected connection does not delete either connected node.
 - [ ] Confirm duplicate connections, self-connections, and cycles are rejected with feedback.
 - [ ] Select a node, edit its settings, save, reopen the settings, and confirm values persist.
 - [ ] Copy and paste a node with Ctrl/Cmd+C and Ctrl/Cmd+V.
