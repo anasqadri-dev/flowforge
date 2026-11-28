@@ -85,10 +85,10 @@ export function initializeNavigation(showNotification) {
                     });
                     break;
                 case '#templates':
-                    await renderTemplatesPage(content);
+                    await renderTemplatesPage(content, () => requestId === routeRequest);
                     break;
                 case '#settings':
-                    await renderSettingsPage(content);
+                    await renderSettingsPage(content, () => requestId === routeRequest);
                     break;
                 default:
                     window.location.hash = '#dashboard';
