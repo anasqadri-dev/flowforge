@@ -50,8 +50,8 @@ The application runs entirely in the browser. It does not require a backend serv
 | HTML5 | Application structure |
 | CSS3 | Styling and responsive layout |
 | Vanilla JavaScript (ES modules) | Application logic |
-| Drawflow | Visual node editor |
-| Lucide | Interface icons |
+| Drawflow 0.0.60 | Visual node editor |
+| Lucide 0.468.0 | Interface icons |
 | IndexedDB | Local application persistence |
 | Local Storage | Small active-workflow and theme preferences |
 | HTML Drag and Drop API | Adding nodes from the box library |
@@ -110,7 +110,8 @@ The application runs entirely in the browser. It does not require a backend serv
 │           ├── settings.js
 │           └── templates.js
 ├── docs/
-│   └── FlowForge_Muhammad-Anas-Qadri_053-24-0016.pdf
+│   ├── FlowForge_Muhammad-Anas-Qadri_053-24-0016.pdf
+│   └── TESTING.md
 ├── LICENSE
 └── README.md
 ```
