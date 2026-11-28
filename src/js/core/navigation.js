@@ -95,7 +95,7 @@ export function initializeNavigation(showNotification) {
         if (!content) return;
 
         try {
-            if (route === '#builder') await waitForWorkflowRestore();
+            await waitForWorkflowRestore();
             if (requestId !== routeRequest) return;
 
             switch (route) {
