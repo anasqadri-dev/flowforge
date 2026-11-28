@@ -56,8 +56,10 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Run a Wait node and confirm the configured duration is respected.
 - [ ] Start a long-running workflow, switch to another workflow before it finishes, and confirm the run is recorded against the workflow that actually ran.
 - [ ] Run an HTTP Request against a CORS-enabled test endpoint; verify method, headers, body, response parsing, timeout, and non-2xx handling.
-- [ ] Run Send Notification with browser permission granted; confirm both the in-app toast and browser notification appear.
-- [ ] Run Send Notification with browser permission denied or unavailable; confirm the in-app toast still displays the interpolated message and the workflow completes successfully.
+- [ ] Run Send Notification and confirm the configured message appears in the in-app notification toast after execution completes.
+- [ ] Confirm the notification message is not replaced by the generic workflow-completed message.
+- [ ] If browser notification permission is granted, confirm the optional native browser notification also appears.
+- [ ] Run Send Notification with browser notification permission denied or unavailable; confirm the in-app toast still displays the interpolated message and the workflow completes successfully.
 - [ ] Run Customer Welcome Notification and confirm the displayed message includes the configured customer name.
 - [ ] Confirm a failed step is marked as failed and its error is visible in Run History.
 
@@ -130,3 +132,12 @@ Do not mark the project fully verified until all critical checks pass on the dep
 - [ ] Navigate from Builder to Dashboard and back to Builder, then run the workflow; verify the live monitor updates in the newly rendered Builder.
 - [ ] Run a workflow that fails, correct the configuration, and run it again; verify the monitor changes from FAILED to RUNNING and then shows the new result.
 - [ ] Run a workflow with a validation error, fix the graph, and run again without refreshing; verify the monitor displays the error and recovers for the next run.
+
+
+## Notification and in-app output regression checks
+- [ ] Run Customer Welcome Notification and verify the exact personalized message appears as a visible in-app toast after the run completes.
+- [ ] Run a workflow with two Send Notification steps (on separate valid terminal branches, one branch per run) and confirm each executed message is delivered.
+- [ ] Confirm notification messages are shown after the execution summary and are not immediately overwritten.
+- [ ] Run Write to Log and confirm its message appears in the Live Execution step output without needing to open DevTools.
+- [ ] Confirm notification delivery still works when native browser notifications are blocked or unsupported.
+- [ ] Confirm repeated notification workflows show a fresh message on every run.
