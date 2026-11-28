@@ -349,6 +349,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
     publishExecutionEvent('flowforge:workflow-finished', { runId, status, duration: Date.now() - startedAt, error: errorMessage });
     return {
         id: runId,
+        initialContext: structuredClone(initialContext),
         workflowId: metadata.workflowId || null,
         workflowName: metadata.workflowName || 'Untitled Workflow',
         status,
