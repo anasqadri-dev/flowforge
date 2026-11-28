@@ -30,13 +30,19 @@ function drawflowNodeId(appId, index) { return String(index + 1); }
 export function getDrawflowEditor() { return editor; }
 export function isImportingDrawflow() { return importing; }
 
+function escapeHTML(value = '') {
+    return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+}
+
 export function createDrawflowNodeHtml(type, config = {}) {
     const icon = icons[type] || 'workflow';
     const suffix = type === 'HTTP Request' && config.method ? ' · ' + config.method
         : type === 'Wait' && config.seconds !== undefined ? ' · ' + config.seconds + 's'
         : type === 'Set Variable' && config.name ? ' · ' + config.name
         : type === 'Loop' && config.count ? ' · ' + config.count + ' iterations' : '';
-    return '<div class="drawflow-node-inner"><span class="node-icon"><i data-lucide="' + icon + '" aria-hidden="true"></i></span><span class="node-text">' + type + suffix + '</span></div>';
+    return '<div class="drawflow-node-inner"><span class="node-icon"><i data-lucide="' + escapeHTML(icon) + '" aria-hidden="true"></i></span><span class="node-text">' + escapeHTML(type) + escapeHTML(suffix) + '</span></div>';
 }
 
 export function getNodePortCounts(type) {
