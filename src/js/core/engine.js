@@ -51,6 +51,18 @@ function validateGraph(nodes, connections) {
         throw new Error('A workflow must contain exactly one start node (Manual Start or Timer).');
     }
 
+    const reachable = new Set();
+    const pending = [starts[0].id];
+    while (pending.length) {
+        const id = pending.pop();
+        if (reachable.has(id)) continue;
+        reachable.add(id);
+        for (const edge of adjacency.get(id)) pending.push(edge.to);
+    }
+    if (reachable.size !== nodes.length) {
+        throw new Error('Every node must be connected to the workflow start node.');
+    }
+
     return { nodeMap, adjacency, reverse, start: starts[0] };
 }
 
