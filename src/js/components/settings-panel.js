@@ -13,7 +13,7 @@ function escapeHTML(value = '') {
   })[char]);
 }
 
-function inputField(label, name, value = '', type = 'text', placeholder = '') {
+function inputField(label, name, value = '', type = 'text', placeholder = '', required = true) {
   return `
     <div class="form-group">
       <label for="${name}">${label}</label>
@@ -23,7 +23,7 @@ function inputField(label, name, value = '', type = 'text', placeholder = '') {
         name="${name}"
         value="${escapeHTML(value)}"
         placeholder="${escapeHTML(placeholder)}"
-        required
+        ${required ? 'required' : ''}
       />
     </div>
   `;
@@ -341,7 +341,7 @@ export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) 
         ${formFields}
         <details class="advanced-node-options"><summary>Reliability options</summary>
           ${inputField('Retry failed step (0–5)', 'retry-count', config.retryCount ?? 0, 'number')}
-          ${inputField('Recovery node ID (optional)', 'on-error-node-id', config.onErrorNodeId || '', 'text', 'Node ID to continue after failure')}
+          ${inputField('Recovery node ID (optional)', 'on-error-node-id', config.onErrorNodeId || '', 'text', 'Node ID to continue after failure', false)}
         </details>
         <button
           type="submit"
