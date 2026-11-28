@@ -79,7 +79,7 @@ function renderFriendlyMessage(message) {
         return `${prefix ? `<p class="log-plain-message">${escapeHTML(prefix)}</p>` : ''}
             <dl class="log-friendly-data">${entries.map(([key, item]) => `
                 <div class="log-friendly-field"><dt>${escapeHTML(String(key).replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ').replace(/^./, c => c.toUpperCase()))}</dt>
-                <dd>${item !== null && typeof item === 'object' ? `<pre>${escapeHTML(JSON.stringify(item, null, 2))}</pre>` : escapeHTML(item === null ? '—' : String(item))}</dd></div>`).join('')}</dl>
+                <dd>${item !== null && typeof item === 'object' ? `<pre>${escapeHTML(JSON.stringify(item, null, 2))}</pre>` : escapeHTML(item === null ? '—' : typeof item === 'string' ? item.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '\n') : String(item))}</dd></div>`).join('')}</dl>
             <details class="log-raw-data"><summary>View formatted data</summary><pre>${escapeHTML(JSON.stringify(value, null, 2))}</pre></details>`;
     }
     return `<p class="log-plain-message">${escapeHTML(String(value ?? ''))}</p>`;
