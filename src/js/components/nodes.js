@@ -74,9 +74,10 @@ function openSettings(drawflowId) {
             'data-input':'input','data-path':'path','data-operator':'operator','data-value':'value','data-second':'second',
             'text-template':'template','text-input':'input','text-search':'search','text-replacement':'replacement','text-delimiter':'delimiter',
             'math-left':'left','math-operation':'operation','math-right':'right',
-            'random-min':'min','random-max':'max','utility-input':'input'
+            'random-min':'min','random-max':'max','utility-input':'input','retry-count':'retryCount','on-error-node-id':'onErrorNodeId','file-name':'filename','file-mime':'mimeType','file-content':'content','sub-workflow-id':'workflowId'
         };
         Object.entries(mappings).forEach(([from,to]) => { if (from in values) { values[to] = values[from]; delete values[from]; } });
+        if ('retryCount' in values) { const count = Number(values.retryCount); if (!Number.isInteger(count) || count < 0 || count > 5) return showNotification('Retry count must be between 0 and 5.'); values.retryCount = count; }
         const configNext = { ...config, ...values };
         syncingFromEditor = true;
         updateNodeConfig(appId, configNext);
@@ -272,6 +273,10 @@ function bindExecutionMonitor() {
         output.textContent = detail.status === 'error'
             ? (detail.error || 'This step failed.')
             : JSON.stringify(detail.output ?? {}, null, 2);
+        if (detail.type === 'Create File' && detail.status === 'success' && detail.output?.readyToDownload) {
+            const download = document.createElement('button'); download.type = 'button'; download.className = 'btn'; download.textContent = 'Download ' + detail.output.filename;
+            download.addEventListener('click', () => { const blob = new Blob([detail.output.content], { type: detail.output.mimeType }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = detail.output.filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }); item.append(download);
+        }
         const live = document.getElementById('execution-live-variables');
         if (live) live.textContent = JSON.stringify(detail.context || detail.output || {}, null, 2);
         executionCompletedCount++;
@@ -347,7 +352,9 @@ function initializeRunButton() {
 
             await saveCurrentWorkflow(false);
             document.dispatchEvent(new CustomEvent('flowforge:workflow-started', { detail: { totalSteps: state.nodes.length } }));
-            const result = await runWorkflow(state.nodes, state.connections, {}, {
+            const selectedFile = document.getElementById('workflow-input-file')?.files?.[0];
+            const fileContext = selectedFile ? { __selectedFileText: await selectedFile.text(), __selectedFileName: selectedFile.name } : {};
+            const result = await runWorkflow(state.nodes, state.connections, fileContext, {
                 workflowId: state.workflowId, workflowName: state.workflowName
             });
             activeDebugRunId = null;
@@ -398,6 +405,9 @@ function initializeKeyboardShortcuts() {
         const editor = getDrawflowEditor();
         if (!editor) return;
         const modifier = event.ctrlKey || event.metaKey;
+        if (modifier && event.key.toLowerCase() === 's') { event.preventDefault(); document.getElementById('save-workflow')?.click(); return; }
+        if (modifier && event.key === 'Enter') { event.preventDefault(); document.getElementById('run-workflow')?.click(); return; }
+        if (modifier && event.shiftKey && event.key.toLowerCase() === 'd') { event.preventDefault(); document.getElementById('debug-pause')?.click(); return; }
         if (modifier && event.key.toLowerCase() === 'z') {
             event.preventDefault();
             if (event.shiftKey) redo(); else undo();
