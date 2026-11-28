@@ -1700,3 +1700,7 @@ textarea:focus-visible, select:focus-visible {
 .debugger-controls button:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 900px) { .showcase-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 560px) { .showcase-grid { grid-template-columns: 1fr; } .settings-row { align-items: stretch; flex-direction: column; } .debugger-controls { justify-content: flex-start; } }
+
+#drawflow-container .connection.execution-flow-active path { stroke-dasharray: 8 6; animation: flowforge-connection-flow .65s linear infinite; }
+@keyframes flowforge-connection-flow { to { stroke-dashoffset: -28; } }
+.dashboard-workflow-actions { display:flex; gap:8px; flex-wrap:wrap; }
