@@ -4,7 +4,8 @@ import {
     getWorkflows,
     deleteWorkflow,
     clearRuns,
-    clearCustomTemplates
+    clearCustomTemplates,
+    deleteSetting
 } from '../core/database.js';
 import { showNotification } from '../components/notifications.js';
 import { setTheme } from '../core/theme.js';
@@ -95,6 +96,7 @@ export async function renderSettingsPage(container, isCurrent = () => true) {
             await Promise.all(workflows.map(workflow => deleteWorkflow(workflow.id)));
             await clearRuns();
             await clearCustomTemplates();
+            await Promise.all(['globalVariables', 'environmentProfiles', 'workflowVersions', 'schedules'].map(deleteSetting));
             state.workflowId = null;
             state.workflowName = 'Untitled Workflow';
             state.createdAt = null;
