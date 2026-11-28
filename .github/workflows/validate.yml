@@ -38,6 +38,9 @@ jobs:
       - name: Test in-app notification delivery
         run: node scripts/validate-notifications.mjs
 
+      - name: Test workflow engine execution
+        run: node scripts/validate-engine.mjs
+
       - name: Verify relative imports
         run: |
           node --input-type=module <<'NODE'
