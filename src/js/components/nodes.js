@@ -1,6 +1,6 @@
 import { renderSettingsPanel } from './settings-panel.js';
 import { state, addNode, updateNodeConfig, moveNode, deleteNode, addConnection, deleteConnection, undo, redo } from '../core/state.js';
-import { runWorkflow } from '../core/engine.js';
+import { runWorkflow, pauseWorkflow, resumeWorkflow, stepWorkflow, cancelWorkflow } from '../core/engine.js';
 import { refreshIcons } from '../core/icons.js';
 import { showNotification } from './notifications.js';
 import { getSetting } from '../core/database.js';
@@ -195,6 +195,7 @@ function setupDrawflowEvents(editor) {
 let executionStepCount = 0;
 let executionCompletedCount = 0;
 let executionListenersBound = false;
+let activeDebugRunId = null;
 
 function getExecutionMonitorElements() {
     return {
@@ -202,7 +203,8 @@ function getExecutionMonitorElements() {
         summary: document.getElementById('execution-summary'),
         status: document.getElementById('execution-status'),
         progress: document.getElementById('execution-progress-bar'),
-        finalContext: document.getElementById('execution-final-context')
+        finalContext: document.getElementById('execution-final-context'),
+        liveVariables: document.getElementById('execution-live-variables')
     };
 }
 
@@ -231,6 +233,7 @@ function bindExecutionMonitor() {
         const { steps, summary } = getExecutionMonitorElements();
         if (!steps) return;
         const detail = event.detail || {};
+        activeDebugRunId = detail.runId || activeDebugRunId;
         const item = document.createElement('li');
         item.className = 'execution-step running';
         item.dataset.nodeId = detail.nodeId || '';
@@ -248,6 +251,8 @@ function bindExecutionMonitor() {
         item.append(heading, output);
         steps.append(item);
         summary.textContent = 'Currently running: ' + (detail.type || 'workflow step');
+        const live = document.getElementById('execution-live-variables');
+        if (live) live.textContent = 'Node: ' + detail.nodeId + '\\nType: ' + detail.type;
         item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
@@ -267,6 +272,8 @@ function bindExecutionMonitor() {
         output.textContent = detail.status === 'error'
             ? (detail.error || 'This step failed.')
             : JSON.stringify(detail.output ?? {}, null, 2);
+        const live = document.getElementById('execution-live-variables');
+        if (live) live.textContent = JSON.stringify(detail.context || detail.output || {}, null, 2);
         executionCompletedCount++;
         const percent = executionStepCount
             ? Math.min(100, executionCompletedCount / executionStepCount * 100)
@@ -275,10 +282,25 @@ function bindExecutionMonitor() {
         summary.textContent = executionCompletedCount + ' of ' + executionStepCount + ' steps completed';
     });
 
+    document.addEventListener('flowforge:debug-paused', () => {
+        const summary = document.getElementById('execution-summary');
+        if (summary) summary.textContent = 'Debugger paused. Inspect the current step, then Resume or Step.';
+        const pause = document.getElementById('debug-pause'); if (pause) pause.disabled = true;
+        const step = document.getElementById('debug-step'); if (step) step.disabled = false;
+        const resume = document.getElementById('debug-resume'); if (resume) resume.disabled = false;
+    });
+    document.addEventListener('flowforge:debug-resumed', () => {
+        const summary = document.getElementById('execution-summary'); if (summary) summary.textContent = 'Execution resumed.';
+        const pause = document.getElementById('debug-pause'); if (pause) pause.disabled = false;
+        const step = document.getElementById('debug-step'); if (step) step.disabled = true;
+        const resume = document.getElementById('debug-resume'); if (resume) resume.disabled = true;
+    });
     document.addEventListener('flowforge:workflow-completed', event => {
         const { steps, summary, status, progress, finalContext } = getExecutionMonitorElements();
         if (!steps) return;
         const result = event.detail || {};
+        activeDebugRunId = result.id || activeDebugRunId;
+        document.querySelectorAll('.debugger-controls button').forEach(button => { button.disabled = true; });
         const succeeded = result.status === 'success';
         status.textContent = succeeded ? 'SUCCESS' : 'FAILED';
         status.className = 'run-status ' + (succeeded ? 'success' : 'error');
@@ -298,9 +320,16 @@ function bindExecutionMonitor() {
 function initializeRunButton() {
     const button = document.getElementById('run-workflow');
     if (!button) return;
+    document.getElementById('debug-pause')?.addEventListener('click', () => pauseWorkflow(activeDebugRunId));
+    document.getElementById('debug-step')?.addEventListener('click', () => stepWorkflow(activeDebugRunId));
+    document.getElementById('debug-resume')?.addEventListener('click', () => resumeWorkflow(activeDebugRunId));
+    document.getElementById('debug-cancel')?.addEventListener('click', () => cancelWorkflow(activeDebugRunId));
     button.addEventListener('click', async () => {
         if (button.disabled) return;
         button.disabled = true;
+        document.querySelectorAll('.debugger-controls button').forEach(control => { control.disabled = false; });
+        const stepControl = document.getElementById('debug-step'); if (stepControl) stepControl.disabled = true;
+        const resumeControl = document.getElementById('debug-resume'); if (resumeControl) resumeControl.disabled = true;
         button.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i> Running...';
         refreshIcons(button);
         try {
@@ -321,6 +350,7 @@ function initializeRunButton() {
             const result = await runWorkflow(state.nodes, state.connections, {}, {
                 workflowId: state.workflowId, workflowName: state.workflowName
             });
+            activeDebugRunId = null;
             const hasNotificationStep = result.steps.some(step =>
                 step.type === 'Send Notification' && step.status === 'success'
             );
