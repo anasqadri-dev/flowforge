@@ -21,7 +21,7 @@ function renderDashboard() {
         </section>
         <section>
             <h2>Saved Workflows</h2>
-            <div id="saved-workflows" class="run-list"><p class="empty">Loading workflows...</p></div>
+            <ul id="saved-workflows" class="run-list"><li class="empty">Loading workflows...</li></ul>
         </section>
         <section>
             <h2>Recent Runs</h2>
@@ -36,7 +36,7 @@ function escapeHTML(value = '') {
     })[char]);
 }
 
-async function loadDashboardData() {
+async function loadDashboardData(showNotification) {
     const [workflows, runs] = await Promise.all([getWorkflows(), getRuns()]);
     const workflowCount = document.getElementById('stat-workflows');
     const runCount = document.getElementById('stat-runs');
@@ -55,7 +55,7 @@ async function loadDashboardData() {
                 <p>Updated ${new Date(workflow.updatedAt || workflow.createdAt).toLocaleString()}</p></div>
                 <button type="button" class="btn-primary open-workflow" data-workflow-id="${escapeHTML(workflow.id)}">Open</button>
             </li>
-        `).join('') || '<p class="empty">No saved workflows yet. Create your first workflow.</p>';
+        `).join('') || '<li class="empty">No saved workflows yet. Create your first workflow.</li>';
 
         saved.querySelectorAll('.open-workflow').forEach(button => {
             button.addEventListener('click', async () => {
@@ -114,7 +114,7 @@ export function initializeNavigation(showNotification) {
                             button.disabled = false;
                         }
                     });
-                    loadDashboardData().catch(error => console.error('Dashboard data could not be loaded:', error));
+                    loadDashboardData(showNotification).catch(error => console.error('Dashboard data could not be loaded:', error));
                     break;
                 case '#builder':
                     content.innerHTML = renderBuilder();
