@@ -54,17 +54,32 @@ function matchesPeriod(log, period) {
 }
 function renderFriendlyMessage(message) {
     let value = message;
+    let prefix = '';
     if (typeof value === 'string') {
         const trimmed = value.trim();
-        if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-            try { value = JSON.parse(trimmed); } catch { /* Keep ordinary text as entered. */ }
+        try {
+            value = JSON.parse(trimmed);
+        } catch {
+            // Workflow messages often include a short sentence before their JSON response.
+            const candidates = [trimmed.indexOf('{'), trimmed.indexOf('[')].filter(index => index >= 0);
+            let parsed = false;
+            for (const index of candidates.sort((a, b) => a - b)) {
+                try {
+                    value = JSON.parse(trimmed.slice(index));
+                    prefix = trimmed.slice(0, index).trim();
+                    parsed = true;
+                    break;
+                } catch { /* Try the next possible JSON opening character. */ }
+            }
+            if (!parsed) value = message;
         }
     }
     if (value && typeof value === 'object') {
         const entries = Array.isArray(value) ? value.map((item, index) => [`Item ${index + 1}`, item]) : Object.entries(value);
-        return `<dl class="log-friendly-data">${entries.map(([key, item]) => `
-            <div class="log-friendly-field"><dt>${escapeHTML(key.replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ').replace(/^./, c => c.toUpperCase()))}</dt>
-            <dd>${item !== null && typeof item === 'object' ? `<pre>${escapeHTML(JSON.stringify(item, null, 2))}</pre>` : escapeHTML(item === null ? '—' : String(item))}</dd></div>`).join('')}</dl>
+        return `${prefix ? `<p class="log-plain-message">${escapeHTML(prefix)}</p>` : ''}
+            <dl class="log-friendly-data">${entries.map(([key, item]) => `
+                <div class="log-friendly-field"><dt>${escapeHTML(String(key).replace(/([A-Z])/g, ' $1').replace(/[_-]/g, ' ').replace(/^./, c => c.toUpperCase()))}</dt>
+                <dd>${item !== null && typeof item === 'object' ? `<pre>${escapeHTML(JSON.stringify(item, null, 2))}</pre>` : escapeHTML(item === null ? '—' : String(item))}</dd></div>`).join('')}</dl>
             <details class="log-raw-data"><summary>View formatted data</summary><pre>${escapeHTML(JSON.stringify(value, null, 2))}</pre></details>`;
     }
     return `<p class="log-plain-message">${escapeHTML(String(value ?? ''))}</p>`;
