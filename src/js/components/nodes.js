@@ -335,7 +335,16 @@ function initializeRunButton() {
             document.dispatchEvent(new CustomEvent('flowforge:workflow-completed', { detail: result }));
         } catch (error) {
             console.error('Workflow execution failed:', error);
-            showNotification('Workflow execution failed.');
+            document.dispatchEvent(new CustomEvent('flowforge:workflow-completed', {
+                detail: {
+                    status: 'error',
+                    error: error.message || 'Workflow execution failed.',
+                    duration: 0,
+                    steps: [],
+                    finalContext: {}
+                }
+            }));
+            showNotification('Workflow execution failed: ' + (error.message || 'Unknown error'));
         } finally {
             button.disabled = false;
             button.innerHTML = '<i data-lucide="play" aria-hidden="true"></i> Run Workflow';
