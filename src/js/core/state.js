@@ -102,9 +102,24 @@ function createsCycle(from, to) {
 }
 
 export function addConnection({ from, to, branch = null, sourceHandle = null }) {
-    if (!state.nodes.some(node => node.id === from) || !state.nodes.some(node => node.id === to)) return null;
+    const sourceNode = state.nodes.find(node => node.id === from);
+    const targetNode = state.nodes.find(node => node.id === to);
+    if (!sourceNode || !targetNode) return null;
     if (from === to || createsCycle(from, to)) return null;
     if (state.connections.some(connection => connection.from === from && connection.to === to)) return null;
+
+    const outgoing = state.connections.filter(connection => connection.from === from);
+    if (sourceNode.type === 'Condition') {
+        const outputPort = sourceHandle || (branch === 'false' ? 'output_2' : 'output_1');
+        if (!['output_1', 'output_2'].includes(outputPort)) return null;
+        if (outgoing.some(connection =>
+            (connection.sourceHandle || (connection.branch === 'false' ? 'output_2' : 'output_1')) === outputPort
+        )) return null;
+    } else if (outgoing.length > 0) {
+        // The execution engine follows one path for ordinary nodes.
+        if (sourceHandle && sourceHandle !== 'output_1') return null;
+        return null;
+    }
 
     const connection = {
         id: crypto.randomUUID(),
