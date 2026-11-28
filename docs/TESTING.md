@@ -63,7 +63,11 @@ Run these checks in a modern desktop browser using the local static server or th
 
 ## 6. Templates and settings
 
-- [ ] Load each built-in template and confirm its nodes and connections appear in Builder.
+- [ ] Confirm the Templates page lists 15 built-in templates plus any saved custom templates.
+- [ ] Load every built-in template and confirm all nodes, connections, positions, and node configurations appear in Builder.
+- [ ] Load API Record Lookup and API Response Summary; confirm `{{nodeId.field}}` references still resolve after the template is cloned.
+- [ ] Load API Status Checker, Support Ticket Triage, and Required Field Validation; confirm both Condition output branches are visible and only the matching branch executes.
+- [ ] Load Send JSON to Webhook and Create Demo API Record; confirm HTTP methods, headers, request bodies, and response logs are populated correctly.
 - [ ] Save the current workflow as a custom template, reload Templates, and confirm it remains available.
 - [ ] Delete a custom template and confirm it disappears.
 - [ ] Change theme and preferences, refresh, and confirm they persist.
