@@ -298,7 +298,7 @@ export const handlers = {
         catch { throw new Error('CSV Generate requires a valid JSON array.'); }
         if (!Array.isArray(rows)) throw new Error('CSV Generate input must be an array.');
         const headers = [...new Set(rows.flatMap(row => Object.keys(row || {})))];
-        return { filename: config.filename || 'flowforge-export.csv', content: stringifyCSV([headers, ...rows.map(row => headers.map(key => row?.[key] ?? ''))]), mimeType: 'text/csv;charset=utf-8' };
+        return { filename: config.filename || 'flowforge-export.csv', content: stringifyCSV([headers, ...rows.map(row => headers.map(key => row?.[key] ?? ''))]), mimeType: 'text/csv;charset=utf-8', readyToDownload: true };
     },
     'Read File': async (config, context) => {
         if (typeof context.__selectedFileText !== 'string') throw new Error('Choose an input file in the Builder before running this workflow.');
