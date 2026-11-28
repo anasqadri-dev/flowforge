@@ -5,7 +5,8 @@ const THEME_STORAGE_KEY = 'theme';
 function applyTheme(theme) {
     const normalized = theme === 'dark' ? 'dark' : 'light';
     document.body.classList.toggle('dark', normalized === 'dark');
-    localStorage.setItem(THEME_STORAGE_KEY, normalized);
+    try { localStorage.setItem(THEME_STORAGE_KEY, normalized); }
+    catch (error) { console.warn('Theme preference could not be stored locally.', error); }
 
     const icon = document.querySelector('#theme-toggle [data-lucide]');
     if (icon) {
@@ -28,7 +29,9 @@ export async function setTheme(theme, persist = true) {
 }
 
 export async function initializeTheme() {
-    let savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'light';
+    let savedTheme = 'light';
+    try { savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'light'; }
+    catch (error) { console.warn('Local theme preference is unavailable.', error); }
     try {
         const databaseTheme = await getSetting('theme');
         if (databaseTheme === 'dark' || databaseTheme === 'light') savedTheme = databaseTheme;
