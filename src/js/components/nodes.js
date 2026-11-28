@@ -321,9 +321,16 @@ function initializeRunButton() {
             const result = await runWorkflow(state.nodes, state.connections, {}, {
                 workflowId: state.workflowId, workflowName: state.workflowName
             });
-            showNotification(result.status === 'success'
-                ? 'Workflow completed successfully in ' + result.duration + ' ms.'
-                : 'Workflow failed: ' + result.error, 4000);
+            const hasNotificationStep = result.steps.some(step =>
+                step.type === 'Send Notification' && step.status === 'success'
+            );
+            // The execution monitor already shows the completion summary. When
+            // a workflow sends a notification, reserve the toast for that message.
+            if (result.status !== 'success' || !hasNotificationStep) {
+                showNotification(result.status === 'success'
+                    ? 'Workflow completed successfully in ' + result.duration + ' ms.'
+                    : 'Workflow failed: ' + result.error, 4000);
+            }
             if (result.status === 'error' && result.steps.length && state.workflowId === result.workflowId) {
                 const failed = result.steps.find(step => step.status === 'error');
                 if (failed) {
