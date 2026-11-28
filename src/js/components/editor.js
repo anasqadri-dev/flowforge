@@ -63,7 +63,7 @@ export function exportStateToDrawflow() {
     const ids = new Map();
     state.nodes.forEach((node, index) => ids.set(node.id, drawflowNodeId(index)));
     state.nodes.forEach((node, index) => {
-        const id = drawflowNodeId(node.id, index);
+        const id = drawflowNodeId(index);
         const ports = getNodePortCounts(node.type);
         const inputs = {};
         const outputs = {};
