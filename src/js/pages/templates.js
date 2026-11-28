@@ -299,7 +299,7 @@ export async function renderTemplatesPage(container, isCurrent = () => true) {
       <div class="page-heading">
         <div>
           <h1>Workflow Templates</h1>
-          <p>Start quickly with ready-made automation workflows.</p>
+          <p>Start quickly with ${BUILT_IN_TEMPLATES.length} built-in automation workflows, plus your own saved templates.</p>
         </div>
 
         <button id="save-current-template" class="btn-primary">
@@ -404,6 +404,7 @@ export async function renderTemplatesPage(container, isCurrent = () => true) {
         replaceWorkflowState({ nodes, connections });
 
         const savedTemplateWorkflow = await saveCurrentWorkflow(false);
+        cancelPendingAutoSave();
         if (!savedTemplateWorkflow) {
           throw new Error('The template was loaded in memory but could not be saved to IndexedDB.');
         }
