@@ -280,7 +280,7 @@ export function initRuns() {
                 const previous = await getRun(button.dataset.runId);
                 const workflow = previous?.workflowId ? await getWorkflow(previous.workflowId) : null;
                 if (!workflow) throw new Error('The original saved workflow is no longer available for replay.');
-                const result = await runWorkflow(workflow.nodes, workflow.connections, {}, { workflowId: workflow.id, workflowName: workflow.name });
+                const result = await runWorkflow(workflow.nodes, workflow.connections, previous.initialContext || {}, { workflowId: workflow.id, workflowName: workflow.name });
                 document.dispatchEvent(new CustomEvent('flowforge:workflow-completed', { detail: result }));
                 await refreshRuns();
             }
