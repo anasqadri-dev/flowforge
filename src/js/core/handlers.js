@@ -34,6 +34,8 @@ function compareValues(left, operator, right) {
     }
 }
 
+import { parseCSV, stringifyCSV } from './advanced.js';
+
 export const handlers = {
     'Manual Start': async () => ({ startedAt: new Date().toISOString() }),
 
@@ -281,6 +283,41 @@ export const handlers = {
         catch { throw new Error('Base64 Decode: input is not valid Base64 text.'); }
     },
 
+    'CSV Parse': async (config, context) => {
+        const rows = parseCSV(interpolate(config.input || '', context));
+        if (!rows.length) return { headers: [], records: [], count: 0 };
+        const headers = rows[0];
+        const records = rows.slice(1).map(row => Object.fromEntries(headers.map((key, index) => [key, row[index] ?? ''])));
+        return { headers, records, count: records.length };
+    },
+    'CSV Generate': async (config, context) => {
+        let rows;
+        try { rows = JSON.parse(interpolate(config.input || '[]', context)); }
+        catch { throw new Error('CSV Generate requires a valid JSON array.'); }
+        if (!Array.isArray(rows)) throw new Error('CSV Generate input must be an array.');
+        const headers = [...new Set(rows.flatMap(row => Object.keys(row || {})))];
+        return { filename: config.filename || 'flowforge-export.csv', content: stringifyCSV([headers, ...rows.map(row => headers.map(key => row?.[key] ?? ''))]), mimeType: 'text/csv;charset=utf-8' };
+    },
+    'Read File': async (config, context) => {
+        if (typeof context.__selectedFileText !== 'string') throw new Error('Choose an input file in the Builder before running this workflow.');
+        return { name: context.__selectedFileName || 'selected-file', size: context.__selectedFileText.length, text: context.__selectedFileText };
+    },
+    'Create File': async (config, context) => ({
+        filename: config.filename || 'flowforge-output.txt',
+        content: interpolate(config.content || '', context),
+        mimeType: config.mimeType || 'text/plain;charset=utf-8',
+        readyToDownload: true
+    }),
+    'Run Sub-workflow': async (config, context) => {
+        if (!config.workflowId) throw new Error('Enter a saved workflow ID in the node settings.');
+        const { getWorkflow } = await import('./database.js');
+        const workflow = await getWorkflow(config.workflowId);
+        if (!workflow) throw new Error('The selected sub-workflow could not be found.');
+        const { runWorkflow } = await import('./engine.js');
+        const result = await runWorkflow(workflow.nodes, workflow.connections, context, { workflowId: workflow.id, workflowName: workflow.name });
+        if (result.status !== 'success') throw new Error('Sub-workflow failed: ' + (result.error || 'Unknown error'));
+        return { runId: result.id, workflowName: result.workflowName, steps: result.steps.length, finalContext: result.finalContext };
+    },
     'Write to Log': async (config, context) => {
         const message = interpolate(config.message || '', context);
         return { message, loggedInApp: true };
