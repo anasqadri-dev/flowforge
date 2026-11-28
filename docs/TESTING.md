@@ -111,3 +111,15 @@ Do not mark the project fully verified until all critical checks pass on the dep
 - [ ] Confirm the canvas is at least 1050 × 900 on desktop and supports placing and connecting more than five nodes without running out of visible workspace.
 - [ ] Confirm the node settings panel has its own vertical scrollbar when its form is taller than the viewport.
 - [ ] Repeat the checks at tablet and mobile widths; confirm the canvas remains horizontally scrollable rather than shrinking to an unusable size.
+
+
+## Builder layout at normal browser zoom
+- [ ] At 100% browser zoom on a 1366 × 768 or larger desktop, confirm the Box Library and canvas fit side by side without horizontal page overflow.
+- [ ] Confirm the Run Workflow button remains fully visible at the top-right of the canvas.
+- [ ] Confirm the workflow-name field is wide enough to read and edit a typical workflow name.
+- [ ] Confirm the canvas fills the available width beside the Box Library and does not force a fixed 1050px horizontal overflow.
+- [ ] Confirm the Builder uses the available viewport height without a large empty border around the library and canvas.
+- [ ] Confirm the Box Library scrolls independently and the canvas remains stationary while browsing box types.
+- [ ] Repeat at 67%, 80%, 100%, and 125% browser zoom; confirm the desktop layout remains usable at each zoom.
+- [ ] Open node settings and confirm the settings panel takes space from the canvas without pushing the Run Workflow button off-screen.
+- [ ] Confirm tablet/mobile layouts remain scrollable and usable.
