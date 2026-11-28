@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - chore/final-audit-cleanup
   pull_request:
     branches:
       - main
