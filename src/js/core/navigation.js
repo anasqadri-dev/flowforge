@@ -57,7 +57,7 @@ async function loadDashboardData(showNotification) {
         saved.innerHTML = workflows.slice(0, 5).map(workflow => `
             <li class="dashboard-run-item">
                 <div><strong>${escapeHTML(workflow.name || 'Untitled Workflow')}</strong>
-                <p>Updated ${new Date(workflow.updatedAt || workflow.createdAt).toLocaleString()}</p></div>
+                <p>Updated ${new Date(workflow.updatedAt || workflow.createdAt).toLocaleString()}</p><small class="muted-text">Workflow ID: ${escapeHTML(workflow.id)}</small></div>
                 <div class="dashboard-workflow-actions"><button type="button" class="btn-primary open-workflow" data-workflow-id="${escapeHTML(workflow.id)}">Open</button><button type="button" class="btn duplicate-workflow" data-workflow-id="${escapeHTML(workflow.id)}">Duplicate</button></div>
             </li>
         `).join('') || '<li class="empty">No saved workflows yet. Create your first workflow.</li>';
