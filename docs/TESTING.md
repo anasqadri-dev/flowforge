@@ -25,7 +25,8 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Delete a connection from each Condition output branch and confirm the other branch remains intact.
 - [ ] Confirm deleting a selected connection does not delete either connected node.
 - [ ] Confirm duplicate connections, self-connections, and cycles are rejected with feedback.
-- [ ] Select a node, edit its settings, save, reopen the settings, and confirm values persist.
+- [ ] Single-click a node and confirm it is selected without opening the settings panel.
+- [ ] Double-click a node and confirm its settings panel opens; edit settings, save, double-click again, and confirm values persist.
 - [ ] Copy and paste a node with Ctrl/Cmd+C and Ctrl/Cmd+V.
 - [ ] Delete a selected node with Delete/Backspace and confirm its connections are also removed.
 - [ ] Undo and redo node creation, movement, configuration, and deletion.
