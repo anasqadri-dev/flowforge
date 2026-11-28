@@ -201,7 +201,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
                 ...(iteration !== null ? { iteration } : {})
             };
             steps.push(step);
-            publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step });
+            publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step, context: structuredClone(context) });
             if (control.pauseAfterStep) { control.pauseAfterStep = false; control.paused = true; publishExecutionEvent('flowforge:debug-paused', { runId, nodeId: node.id }); }
             return output;
         } catch (error) {
