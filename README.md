@@ -52,7 +52,7 @@ The application runs entirely in the browser. It does not require a backend serv
 - CSV parsing/generation, browser-selected file input, generated file downloads, and reusable sub-workflows.
 - Workflow duplication and saved execution replay using the exact workflow snapshot from the selected run.
 - Application backup/restore for workflows, run history, settings and variables (templates are excluded).
-- One-click Demo Mode, interactive tutorials, and CSV/printable PDF execution reports.
+- Interactive tutorials and CSV/printable PDF execution reports.
 - Responsive application layout.
 - Text-only FlowForge sidebar wordmark and a custom SVG browser favicon.
 
