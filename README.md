@@ -36,6 +36,8 @@ The application runs entirely in the browser. It does not require a backend serv
 - 28 built-in workflow boxes across triggers, HTTP/API, data/JSON, arrays, text, math/utilities, and flow control.
 - Dynamic configuration forms and executable handlers for JSON parsing/validation, array filtering, text processing, math, date/time, UUID, URL, and Base64 operations.
 - Live in-app execution monitor showing each step as it starts and finishes, with readable outputs, errors, progress, and final workflow data.
+- In-app notification delivery after workflow completion; native browser notifications are an optional enhancement.
+- Write to Log results are displayed in the execution monitor rather than relying on the browser console.
 - Workflow execution with sequential steps, conditions, and bounded loop bodies.
 - Variable interpolation between workflow steps.
 - Execution history with step-level inputs, outputs, and errors.
@@ -163,7 +165,7 @@ Opening `index.html` directly with a `file://` URL is not recommended because th
 
 ## Testing and known limitations
 
-The repository currently uses a manual browser acceptance-test workflow; it does not include an automated unit or end-to-end test suite. Before release, verify the scenarios in [docs/TESTING.md](docs/TESTING.md).
+The repository includes automated JavaScript syntax/import checks, built-in template validation, and box-handler/notification regression checks. Full browser acceptance and end-to-end testing remain manual; verify the scenarios in [docs/TESTING.md](docs/TESTING.md). Before release, verify the scenarios in [docs/TESTING.md](docs/TESTING.md).
 
 - Workflow data is local to the browser profile and is not synchronized across devices.
 - Timer-based workflows require the application tab to remain open.

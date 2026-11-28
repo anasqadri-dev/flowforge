@@ -29,4 +29,39 @@ assert.equal((await handlers['URL Encode']({input:'hello world'}, {})).value, 'h
 assert.equal((await handlers['URL Decode']({input:'hello%20world'}, {})).value, 'hello world');
 const encoded = (await handlers['Base64 Encode']({input:'FlowForge ✓'}, {})).value;
 assert.equal((await handlers['Base64 Decode']({input:encoded}, {})).value, 'FlowForge ✓');
-console.log(`Validated ${required.length} box handlers and 18 execution scenarios.`);
+// Notification handlers return their interpolated message for the in-app
+// notification component to display after the run has completed.
+globalThis.window = {};
+const notification = await handlers['Send Notification'](
+  { message: 'Welcome, {{customer}}!' },
+  { customer: 'Ada' }
+);
+assert.equal(notification.message, 'Welcome, Ada!');
+assert.equal(notification.delivered, true);
+assert.equal(notification.inAppDelivered, true);
+assert.equal(notification.browserNotificationDelivered, false);
+
+// Write to Log returns a visible step result; it does not rely on DevTools.
+const logResult = await handlers['Write to Log']({ message: 'Visible in FlowForge' }, {});
+assert.equal(logResult.message, 'Visible in FlowForge');
+assert.equal(logResult.loggedInApp, true);
+
+// Every registered handler must also be accepted by workflow persistence.
+globalThis.document = { getElementById: () => null };
+const { validateWorkflow } = await import('../src/js/core/persistence.js');
+for (const type of required) {
+  const isStart = ['Manual Start', 'Timer (Schedule)'].includes(type);
+  const workflow = isStart
+    ? { nodes: [{ id: 'start', type, x: 0, y: 0, config: {} }], connections: [] }
+    : {
+        nodes: [
+          { id: 'start', type: 'Manual Start', x: 0, y: 0, config: {} },
+          { id: 'action', type, x: 200, y: 0, config: {} }
+        ],
+        connections: [{ id: 'edge', from: 'start', to: 'action' }]
+      };
+  assert.equal(validateWorkflow(workflow, { requireStart: true, strictConnections: true }), true,
+    `Persistence rejected supported box: ${type}`);
+}
+
+console.log(`Validated ${required.length} box handlers and 22 execution scenarios and persistence support for all box types.`);

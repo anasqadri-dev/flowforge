@@ -5,6 +5,7 @@ import {
     getSetting
 } from './database.js';
 import { state, replaceWorkflowState } from './state.js';
+import { handlers } from './handlers.js';
 
 let saveTimer = null;
 let notificationCallback = null;
@@ -77,7 +78,7 @@ export async function loadWorkflowById(id) {
             nodes: workflow.nodes,
             connections: workflow.connections
         });
-        localStorage.setItem('flowforge-active-workflow', workflow.id);
+        writeActiveWorkflowId(workflow.id);
         document.dispatchEvent(new CustomEvent('flowforge:workflow-loaded', { detail: workflow }));
         return true;
     } catch (error) {
@@ -165,7 +166,8 @@ export function validateWorkflow(workflow, { requireStart = false, strictConnect
         throw new Error('Invalid workflow file structure.');
     }
 
-    const allowedTypes = new Set(['Manual Start', 'Timer (Schedule)', 'HTTP Request', 'Transform Data', 'Set Variable', 'Wait', 'Condition', 'Loop', 'Send Notification', 'Write to Log']);
+    // Keep persisted/imported workflows aligned with the actual executable box library.
+    const allowedTypes = new Set(Object.keys(handlers));
     const ids = new Set();
     for (const node of workflow.nodes) {
         if (!node || typeof node.id !== 'string' || !node.id.trim() ||

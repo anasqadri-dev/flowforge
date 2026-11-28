@@ -107,7 +107,7 @@ export const BUILT_IN_TEMPLATES = [
   }),
   makeLinearTemplate({
     id: 'notification-workflow', name: 'Notification Automation',
-    description: 'Send a browser notification after a short delay. Browser notification permission is required.',
+    description: 'Show an in-app notification after a short delay. A native browser notification is optional.',
     category: 'Productivity',
     steps: [
       { type: 'Wait', config: { seconds: 3 } },
@@ -193,7 +193,7 @@ export const BUILT_IN_TEMPLATES = [
   }),
   makeLinearTemplate({
     id: 'customer-welcome', name: 'Customer Welcome Notification',
-    description: 'Prepare a personalized welcome message and show it as a browser notification.',
+    description: 'Prepare a personalized welcome message and display it inside FlowForge after execution completes.',
     category: 'Customer Operations',
     steps: [
       { type: 'Set Variable', config: { name: 'customerName', value: 'New Customer' } },

@@ -36,6 +36,9 @@ jobs:
       - name: Test box library handlers
         run: node scripts/validate-box-library.mjs
 
+      - name: Test in-app notification delivery
+        run: node scripts/validate-notifications.mjs
+
       - name: Verify relative imports
         run: |
           node --input-type=module <<'NODE'

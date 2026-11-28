@@ -132,12 +132,8 @@ export const handlers = {
     'Send Notification': async (config, context) => {
         const message = interpolate(config.message || 'Workflow notification', context);
 
-        // Always deliver an in-app message. Browser notifications are an optional
-        // enhancement because permission may be unavailable or denied.
-        document.dispatchEvent(new CustomEvent('flowforge:notify', {
-            detail: { message }
-        }));
-
+        // Return the message as step output. The notification UI displays it
+        // after the workflow completes, so the generic run summary cannot replace it.
         let browserNotificationDelivered = false;
         if ('Notification' in window && Notification.permission === 'granted') {
             try {
@@ -287,7 +283,6 @@ export const handlers = {
 
     'Write to Log': async (config, context) => {
         const message = interpolate(config.message || '', context);
-        console.log('[FlowForge]', message);
-        return { message };
+        return { message, loggedInApp: true };
     }
 };
