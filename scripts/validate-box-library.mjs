@@ -50,13 +50,18 @@ assert.equal(logResult.loggedInApp, true);
 globalThis.document = { getElementById: () => null };
 const { validateWorkflow } = await import('../src/js/core/persistence.js');
 for (const type of required) {
-  assert.equal(validateWorkflow({
-    nodes: [
-      { id: 'start', type: 'Manual Start', x: 0, y: 0, config: {} },
-      { id: 'action', type, x: 200, y: 0, config: {} }
-    ],
-    connections: [{ id: 'edge', from: 'start', to: 'action' }]
-  }, { requireStart: true, strictConnections: true }), true, `Persistence rejected supported box: ${type}`);
+  const isStart = ['Manual Start', 'Timer (Schedule)'].includes(type);
+  const workflow = isStart
+    ? { nodes: [{ id: 'start', type, x: 0, y: 0, config: {} }], connections: [] }
+    : {
+        nodes: [
+          { id: 'start', type: 'Manual Start', x: 0, y: 0, config: {} },
+          { id: 'action', type, x: 200, y: 0, config: {} }
+        ],
+        connections: [{ id: 'edge', from: 'start', to: 'action' }]
+      };
+  assert.equal(validateWorkflow(workflow, { requireStart: true, strictConnections: true }), true,
+    `Persistence rejected supported box: ${type}`);
 }
 
 console.log(`Validated ${required.length} box handlers and 22 execution scenarios and persistence support for all box types.`);
