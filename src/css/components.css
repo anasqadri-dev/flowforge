@@ -1704,3 +1704,89 @@ textarea:focus-visible, select:focus-visible {
 #drawflow-container .connection.execution-flow-active path { stroke-dasharray: 8 6; animation: flowforge-connection-flow .65s linear infinite; }
 @keyframes flowforge-connection-flow { to { stroke-dashoffset: -28; } }
 .dashboard-workflow-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+
+/* FlowForge visual consistency and compact execution controls */
+html, body, button, input, textarea, select, option, label, a, p, li, small, strong, summary {
+    font-family: var(--font-family);
+}
+button, input, textarea, select { font-size: inherit; }
+.content > section, .page-container, .page-container > section { min-width: 0; }
+.page-container, .settings-page, .templates-page { color: var(--color-text-primary); }
+.page-container > .page-heading h1, .settings-page > .page-heading h1 { font-size: clamp(26px, 2.2vw, 34px); }
+.page-container > .page-heading p, .settings-page > .page-heading p { font-size: 14px; line-height: 1.6; }
+.settings-advanced-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 18px;
+    margin-top: 0;
+}
+.settings-advanced-tools > .settings-card {
+    min-width: 0;
+    margin: 0;
+    padding: 22px 24px;
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+}
+.settings-advanced-tools > .settings-card-wide { grid-column: 1 / -1; }
+.settings-card-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.settings-card-heading h2 { margin-bottom: 7px !important; padding: 0 !important; border: 0 !important; }
+.settings-card-heading p { color:var(--color-text-secondary); font-size:13px; line-height:1.6; }
+.settings-card-heading > [data-lucide] { width:22px; height:22px; color:var(--color-primary); flex:0 0 auto; }
+.settings-field-label { display:block; margin:14px 0 6px; color:var(--color-text-secondary); font-size:13px; font-weight:600; }
+.settings-advanced-tools textarea {
+    display:block; width:100%; min-height:140px; margin:8px 0 10px;
+    color:var(--color-text-primary); background:var(--color-surface-secondary);
+    border:1px solid var(--color-border); border-radius:var(--radius-sm);
+    padding:12px; font:13px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.settings-advanced-tools .settings-actions { margin:14px 0 8px; }
+.settings-advanced-tools .settings-shortcuts { display:grid; gap:0; }
+.settings-advanced-tools .settings-row { min-height:48px; padding:10px 0; }
+.settings-advanced-tools .settings-row:last-child { border-bottom:0; }
+.settings-advanced-tools kbd { font:12px/1.4 var(--font-family); white-space:nowrap; }
+.settings-page > .settings-card { height:auto; }
+.settings-page .danger-zone { grid-column:1 / -1; }
+.settings-page > .settings-card:last-child { grid-column:1 / -1; }
+.execution-monitor {
+    display:flex; flex-direction:column; min-height:220px; max-height: min(72vh, 760px);
+    overflow:hidden; padding:18px; gap:12px;
+}
+.execution-monitor-heading { flex:0 0 auto; }
+.execution-progress { flex:0 0 4px; }
+.execution-steps { flex:1 1 auto; min-height:70px; overflow:auto; }
+.execution-context { flex:0 0 auto; }
+.debugger-controls {
+    order:10; align-self:flex-start; justify-content:flex-start;
+    display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 0; padding-top:10px;
+    border-top:1px solid var(--color-border); width:100%;
+}
+.debugger-controls .debugger-control-btn {
+    min-height:30px; height:30px; min-width:58px; padding:5px 10px;
+    border-radius:7px; font-size:12px; line-height:1; font-weight:600;
+}
+.debugger-controls .danger-button {
+    min-height:30px; height:30px; padding:5px 10px; font-size:12px; border-radius:7px;
+}
+.log-friendly-message { display:block; font-family:var(--font-family); }
+.log-friendly-data { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; }
+.log-friendly-field { min-width:0; padding:11px 12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; }
+.log-friendly-field dt { margin-bottom:5px; color:var(--color-text-muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.035em; }
+.log-friendly-field dd { color:var(--color-text-primary); font-size:14px; line-height:1.55; overflow-wrap:anywhere; }
+.log-friendly-field dd pre, .log-raw-data pre { margin:7px 0 0; padding:10px; border-radius:7px; background:var(--color-surface-secondary); white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.log-plain-message { margin:0; color:var(--color-text-primary); font-size:14px; line-height:1.65; overflow-wrap:anywhere; }
+.log-raw-data { margin-top:12px; }
+.log-raw-data summary { color:var(--color-primary); cursor:pointer; font-size:12px; font-weight:600; }
+.log-configured-message p { color:var(--color-text-secondary); font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
+.run-status.cancelled { color:var(--color-warning); background:color-mix(in srgb,var(--color-warning) 12%,transparent); }
+@media (max-width:900px) {
+    .settings-advanced-tools { grid-template-columns:1fr; }
+    .settings-advanced-tools > .settings-card-wide, .settings-page .danger-zone, .settings-page > .settings-card:last-child { grid-column:1; }
+}
+@media (max-width:600px) {
+    .execution-monitor { max-height:75vh; padding:12px; }
+    .debugger-controls { gap:5px; }
+    .debugger-controls .debugger-control-btn, .debugger-controls .danger-button { min-width:52px; padding:5px 8px; }
+    .settings-advanced-tools > .settings-card { padding:17px; }
+}
