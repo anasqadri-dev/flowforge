@@ -11,12 +11,13 @@ import { setTheme } from '../core/theme.js';
 import { state, replaceWorkflowState } from '../core/state.js';
 import { cancelPendingAutoSave } from '../core/persistence.js';
 
-export async function renderSettingsPage(container) {
+export async function renderSettingsPage(container, isCurrent = () => true) {
     const savedTheme = await getSetting('theme') || localStorage.getItem('theme') || 'light';
     const preferences = await getSetting('preferences') || {
         confirmDelete: true,
         defaultWorkflowName: 'Untitled Workflow'
     };
+    if (!isCurrent()) return;
 
     container.innerHTML = `
         <section class="settings-page">
