@@ -314,7 +314,7 @@ export const handlers = {
         const workflow = await getWorkflow(config.workflowId);
         if (!workflow) throw new Error('The selected sub-workflow could not be found.');
         const { runWorkflow } = await import('./engine.js');
-        const result = await runWorkflow(workflow.nodes, workflow.connections, context, { workflowId: workflow.id, workflowName: workflow.name });
+        const result = await runWorkflow(workflow.nodes, workflow.connections, context, { workflowId: workflow.id, workflowName: workflow.name, workflowSnapshot: { nodes: workflow.nodes, connections: workflow.connections } });
         if (result.status !== 'success') throw new Error('Sub-workflow failed: ' + (result.error || 'Unknown error'));
         return { runId: result.id, workflowName: result.workflowName, steps: result.steps.length, finalContext: result.finalContext };
     },
