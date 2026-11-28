@@ -105,6 +105,7 @@ async function restoreLatestWorkflow() {
 }
 
 export async function createNewWorkflow() {
+    await waitForWorkflowRestore();
     cancelPendingAutoSave();
 
     // Preserve the current workflow before switching to a new empty one.
