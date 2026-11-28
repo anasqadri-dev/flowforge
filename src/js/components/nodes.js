@@ -409,7 +409,7 @@ function initializeKeyboardShortcuts() {
         const modifier = event.ctrlKey || event.metaKey;
         if (modifier && event.key.toLowerCase() === 's') { event.preventDefault(); document.getElementById('save-workflow')?.click(); return; }
         if (modifier && event.key === 'Enter') { event.preventDefault(); document.getElementById('run-workflow')?.click(); return; }
-        if (modifier && event.shiftKey && event.key.toLowerCase() === 'd') { event.preventDefault(); document.getElementById('debug-pause')?.click(); return; }
+        if (modifier && event.shiftKey && event.key.toLowerCase() === 'd') { event.preventDefault(); if (document.getElementById('debug-pause')?.disabled) resumeWorkflow(activeDebugRunId); else pauseWorkflow(activeDebugRunId); return; }
         if (modifier && event.key.toLowerCase() === 'z') {
             event.preventDefault();
             if (event.shiftKey) redo(); else undo();
