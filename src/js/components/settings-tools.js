@@ -2,6 +2,7 @@ import { downloadApplicationBackup, restoreApplicationBackup } from '../core/bac
 import { getGlobalVariables, saveGlobalVariables, getEnvironmentProfiles, saveEnvironmentProfiles, getSchedules, scheduleWorkflow, restoreWorkflowVersion } from '../core/advanced.js';
 import { getSetting, saveSetting, getWorkflows } from '../core/database.js';
 import { showNotification } from './notifications.js';
+import { loadWorkflowById } from '../core/persistence.js';
 
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -85,8 +86,9 @@ export async function mountSettingsTools(container) {
         try {
             if (!versionSelect.value) throw new Error('No saved version is available.');
             if (!window.confirm('Restore this workflow version?')) return;
-            await restoreWorkflowVersion(versionWorkflow.value, versionSelect.value);
-            showNotification('Version restored. Open Builder to continue.');
+            const restored = await restoreWorkflowVersion(versionWorkflow.value, versionSelect.value);
+            await loadWorkflowById(restored.id);
+            showNotification('Workflow version restored and loaded.');
             window.location.hash = '#builder';
         } catch (error) { showNotification(error.message || 'Unable to restore version.'); }
     });
