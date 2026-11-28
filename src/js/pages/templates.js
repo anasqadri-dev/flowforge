@@ -140,7 +140,7 @@ const BUILT_IN_TEMPLATES = [
   }),
   makeLinearTemplate({
     id: 'text-cleanup', name: 'Text Cleanup Pipeline',
-    description: 'Normalize a text value by trimming it and preparing a clean output for downstream steps.',
+    description: 'Pass a reusable text value through the transformation step and inspect the prepared output.',
     category: 'Data Preparation',
     steps: [
       { type: 'Set Variable', config: { name: 'rawText', value: '  New customer inquiry received  ' } },
@@ -254,6 +254,21 @@ const BUILT_IN_TEMPLATES = [
     ]
   })
 ];
+
+function remapNodeReferences(value, idMap) {
+  if (typeof value === 'string') {
+    return value.replace(/\{\{\s*([A-Za-z0-9_-]+)(?=\.|\s*\}\})/g, (match, nodeId) =>
+      idMap.has(nodeId) ? match.replace(nodeId, idMap.get(nodeId)) : match
+    );
+  }
+  if (Array.isArray(value)) return value.map(item => remapNodeReferences(item, idMap));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+      key, remapNodeReferences(item, idMap)
+    ]));
+  }
+  return value;
+}
 
 function escapeHTML(value = '') {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -372,6 +387,7 @@ export async function renderTemplatesPage(container, isCurrent = () => true) {
         const nodes = template.nodes.map(node => ({
           ...structuredClone(node),
           id: idMap.get(node.id),
+          config: remapNodeReferences(structuredClone(node.config || {}), idMap),
           x: Number(node.x) || 0,
           y: Number(node.y) || 0
         }));
