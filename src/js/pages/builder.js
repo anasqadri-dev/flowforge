@@ -38,6 +38,12 @@ export function renderBuilder() {
           <input type="file" id="workflow-file" accept=".json,application/json" hidden>
         </div>
         <button type="button" id="run-workflow" class="btn-primary run-workflow-btn"><i data-lucide="play" aria-hidden="true"></i> Run Workflow</button>
+        <section id="execution-monitor" class="execution-monitor" aria-live="polite" aria-label="Live workflow execution">
+          <div class="execution-monitor-heading"><div><h3>Live Execution</h3><p id="execution-summary">Run your workflow to watch each step and its output here.</p></div><span id="execution-status" class="run-status idle">IDLE</span></div>
+          <div class="execution-progress"><span id="execution-progress-bar"></span></div>
+          <ol id="execution-steps" class="execution-steps"><li class="execution-empty">No execution yet. Press Run Workflow to begin.</li></ol>
+          <details class="execution-context"><summary>Final workflow data</summary><pre id="execution-final-context">No data yet.</pre></details>
+        </section>
       </main>
       <div id="settings-container" style="display: none;"></div>
     </div>
