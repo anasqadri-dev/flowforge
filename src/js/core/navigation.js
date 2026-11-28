@@ -3,7 +3,7 @@ import { renderRuns, initRuns } from '../pages/runs.js';
 import { renderLogs, initLogs } from '../pages/logs.js';
 import { renderTemplatesPage } from '../pages/templates.js';
 import { renderSettingsPage } from '../pages/settings.js';
-import { renderShowcase } from '../pages/showcase.js';
+import { renderShowcase, initShowcase } from '../pages/showcase.js';
 import { renderTutorials, initTutorials } from '../pages/tutorials.js';
 import { renderAnalytics } from '../pages/analytics.js';
 import { initNodes } from '../components/nodes.js';
@@ -148,6 +148,7 @@ export function initializeNavigation(showNotification) {
                     break;
                 case '#showcase':
                     content.innerHTML = renderShowcase();
+                    initShowcase(content);
                     break;
                 case '#tutorials':
                     content.innerHTML = renderTutorials();
