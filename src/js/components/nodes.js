@@ -167,9 +167,17 @@ function setupDrawflowEvents(editor) {
         }
     });
 
-    editor.on('nodeSelected', id => {
+    editor.on('nodeSelected', () => {
+        // A single click selects a node only; settings open on double-click.
         selectedConnection = null;
-        openSettings(id);
+    });
+
+    const canvas = document.getElementById('drawflow-container');
+    canvas?.addEventListener('dblclick', event => {
+        const nodeElement = event.target.closest('.drawflow-node');
+        if (!nodeElement || !canvas.contains(nodeElement)) return;
+        const drawflowId = nodeElement.id.replace(/^node-/, '');
+        if (drawflowId) openSettings(drawflowId);
     });
     editor.on('click', event => {
         if (!event.target.closest('.drawflow-node')) {
