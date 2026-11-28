@@ -139,13 +139,14 @@ const BUILT_IN_TEMPLATES = [
     ]
   }),
   makeLinearTemplate({
-    id: 'text-cleanup', name: 'Text Cleanup Pipeline',
-    description: 'Pass a reusable text value through the transformation step and inspect the prepared output.',
+    id: 'customer-message-composer', name: 'Customer Message Composer',
+    description: 'Combine customer and case details into a personalized update that can be logged or reused by later workflow steps.',
     category: 'Data Preparation',
     steps: [
-      { type: 'Set Variable', config: { name: 'rawText', value: '  New customer inquiry received  ' } },
-      { type: 'Transform Data', config: { input: '{{rawText}}' } },
-      { type: 'Write to Log', config: { message: 'Cleaned text value: {{n3.result}}' } }
+      { type: 'Set Variable', config: { name: 'customerName', value: 'Ayesha' } },
+      { type: 'Set Variable', config: { name: 'caseNumber', value: 'CASE-2048' } },
+      { type: 'Transform Data', config: { input: 'Hello {{customerName}}, your support case {{caseNumber}} has been received. We will contact you with an update.' } },
+      { type: 'Write to Log', config: { message: '{{n4.result}}' } }
     ]
   }),
   makeLinearTemplate({
