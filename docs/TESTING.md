@@ -36,7 +36,7 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Run a Condition workflow with one true and one false path; confirm only the selected path executes.
 - [ ] Run a Loop with a connected body path and a small iteration count; confirm each body step executes the expected number of times.
 - [ ] Try a Loop with no selected body, disconnected body nodes, and an invalid count; confirm a clear error is shown.
-- [ ] Try a workflow with no start node or multiple start nodes; confirm execution is rejected.
+- [ ] Try a workflow with no start node, multiple start nodes, or disconnected nodes; confirm execution is rejected.
 - [ ] Run a Wait node and confirm the configured duration is respected.
 - [ ] Start a long-running workflow, switch to another workflow before it finishes, and confirm the run is recorded against the workflow that actually ran.
 - [ ] Run an HTTP Request against a CORS-enabled test endpoint; verify method, headers, body, response parsing, timeout, and non-2xx handling.
