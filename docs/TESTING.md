@@ -43,6 +43,11 @@ Run these checks in a modern desktop browser using the local static server or th
 ## 3. Workflow execution
 
 - [ ] Run a Manual Start → Write to Log workflow and confirm a successful run record is created.
+- [ ] While a workflow runs, confirm the Builder's Live Execution panel updates for every step without opening DevTools or Run History.
+- [ ] Confirm each step displays RUNNING followed by SUCCESS/ERROR and shows its output or error message.
+- [ ] Confirm the progress bar, final status, duration, and expandable final workflow data update after completion.
+- [ ] Run a Loop and confirm repeated body steps appear separately with their iteration numbers.
+- [ ] Run a failing workflow and confirm the failed step and its error are visible immediately in the Builder.
 - [ ] Run a Set Variable → Transform Data workflow using a `{{variableName}}` placeholder and confirm interpolation.
 - [ ] Run a Condition workflow with one true and one false path; confirm only the selected path executes.
 - [ ] Run a Loop with a connected body path and a small iteration count; confirm each body step executes the expected number of times.
