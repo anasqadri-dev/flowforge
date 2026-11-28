@@ -3,9 +3,7 @@ import { renderRuns, initRuns } from '../pages/runs.js';
 import { renderLogs, initLogs } from '../pages/logs.js';
 import { renderTemplatesPage } from '../pages/templates.js';
 import { renderSettingsPage } from '../pages/settings.js';
-import { renderShowcase, initShowcase } from '../pages/showcase.js';
 import { renderTutorials, initTutorials } from '../pages/tutorials.js';
-import { renderAnalytics } from '../pages/analytics.js';
 import { initNodes } from '../components/nodes.js';
 import { refreshIcons } from './icons.js';
 import { waitForWorkflowRestore, createNewWorkflow, loadWorkflowById } from './persistence.js';
@@ -146,16 +144,9 @@ export function initializeNavigation(showNotification) {
                 case '#settings':
                     await renderSettingsPage(content, () => requestId === routeRequest);
                     break;
-                case '#showcase':
-                    content.innerHTML = renderShowcase();
-                    initShowcase(content);
-                    break;
                 case '#tutorials':
                     content.innerHTML = renderTutorials();
                     initTutorials(content);
-                    break;
-                case '#analytics':
-                    await renderAnalytics(content, () => requestId === routeRequest);
                     break;
                 default:
                     window.location.hash = '#dashboard';
