@@ -36,8 +36,6 @@ function compareValues(left, operator, right) {
 
 import { parseCSV, stringifyCSV } from './advanced.js';
 
-import { parseCSV, stringifyCSV } from './advanced.js';
-
 export const handlers = {
     'Manual Start': async () => ({ startedAt: new Date().toISOString() }),
 
