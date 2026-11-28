@@ -89,6 +89,8 @@ export function downloadTextFile(content, filename, type = 'text/plain') {
 }
 
 export async function exportRunReport(runId, format = 'csv') {
+    const reportWindow = format === 'pdf' ? window.open('about:blank', '_blank') : null;
+    if (format === 'pdf' && !reportWindow) throw new Error('Allow pop-ups to open the printable PDF report.');
     const runs = await getRuns();
     const run = runs.find(item => item.id === runId);
     if (!run) throw new Error('Execution record not found.');
@@ -105,7 +107,7 @@ export async function exportRunReport(runId, format = 'csv') {
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>FlowForge Execution Report</title><style>body{font:14px Arial;margin:36px;color:#222}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:8px;text-align:left}pre{white-space:pre-wrap}</style></head><body><h1>FlowForge Execution Report</h1><h2>${safe(run.workflowName)}</h2><p>Status: ${safe(run.status)} | Started: ${new Date(run.startedAt).toLocaleString()} | Duration: ${run.duration} ms</p><table><thead><tr><th>Step</th><th>Node</th><th>Status</th><th>Duration</th><th>Output / Error</th></tr></thead><tbody>${(run.steps || []).map((step, index) => `<tr><td>${index + 1}</td><td>${safe(step.type)}</td><td>${safe(step.status)}</td><td>${step.duration || 0} ms</td><td><pre>${safe(JSON.stringify(step.output ?? step.error ?? '', null, 2))}</pre></td></tr>`).join('')}</tbody></table><script>window.print()</script></body></html>`;
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    window.open(url, '_blank', 'noopener');
+    reportWindow.location.href = url;
     setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
