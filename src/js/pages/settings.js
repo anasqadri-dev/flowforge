@@ -11,12 +11,18 @@ import { setTheme } from '../core/theme.js';
 import { state, replaceWorkflowState } from '../core/state.js';
 import { cancelPendingAutoSave } from '../core/persistence.js';
 
-export async function renderSettingsPage(container) {
-    const savedTheme = await getSetting('theme') || localStorage.getItem('theme') || 'light';
+export async function renderSettingsPage(container, isCurrent = () => true) {
+    const databaseTheme = await getSetting('theme');
+    let savedTheme = databaseTheme || 'light';
+    if (!databaseTheme) {
+        try { savedTheme = localStorage.getItem('theme') || 'light'; }
+        catch (error) { console.warn('Local theme preference is unavailable.', error); }
+    }
     const preferences = await getSetting('preferences') || {
         confirmDelete: true,
         defaultWorkflowName: 'Untitled Workflow'
     };
+    if (!isCurrent()) return;
 
     container.innerHTML = `
         <section class="settings-page">
@@ -77,6 +83,10 @@ export async function renderSettingsPage(container) {
         const confirmDelete = container.querySelector('#confirm-delete').checked;
         if (confirmDelete && !window.confirm('Permanently delete all saved workflows, runs, and custom templates?')) return;
 
+        // Stop a queued autosave before deleting records so it cannot recreate
+        // the active workflow while the clear operation is in progress.
+        cancelPendingAutoSave();
+
         try {
             const workflows = await getWorkflows();
             await Promise.all(workflows.map(workflow => deleteWorkflow(workflow.id)));
@@ -87,7 +97,8 @@ export async function renderSettingsPage(container) {
             state.createdAt = null;
             replaceWorkflowState({ nodes: [], connections: [] });
             cancelPendingAutoSave();
-            localStorage.removeItem('flowforge-active-workflow');
+            try { localStorage.removeItem('flowforge-active-workflow'); }
+            catch (storageError) { console.warn('Could not clear the active workflow pointer.', storageError); }
             showNotification('Application data cleared successfully.');
             window.location.hash = '#dashboard';
         } catch (error) {

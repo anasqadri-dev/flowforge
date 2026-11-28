@@ -173,7 +173,7 @@ function initializeRunButton() {
             showNotification(result.status === 'success'
                 ? 'Workflow completed successfully in ' + result.duration + ' ms.'
                 : 'Workflow failed: ' + result.error, 4000);
-            if (result.status === 'error' && result.steps.length) {
+            if (result.status === 'error' && result.steps.length && state.workflowId === result.workflowId) {
                 const failed = result.steps.find(step => step.status === 'error');
                 if (failed) {
                     const drawflowId = Object.values(getDrawflowEditor()?.export()?.drawflow?.Home?.data || {})

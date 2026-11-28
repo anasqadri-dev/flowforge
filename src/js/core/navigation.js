@@ -4,7 +4,7 @@ import { renderTemplatesPage } from '../pages/templates.js';
 import { renderSettingsPage } from '../pages/settings.js';
 import { initNodes } from '../components/nodes.js';
 import { refreshIcons } from './icons.js';
-import { waitForWorkflowRestore } from './persistence.js';
+import { waitForWorkflowRestore, createNewWorkflow, loadWorkflowById } from './persistence.js';
 import { getWorkflows, getRuns } from './database.js';
 
 function renderDashboard() {
@@ -16,8 +16,12 @@ function renderDashboard() {
             <article class="stat-card"><h3 id="stat-success">0%</h3><p>Success Rate</p></article>
         </section>
         <section class="quick-actions">
-            <a href="#builder" class="btn-primary"><i data-lucide="plus" aria-hidden="true"></i> New Workflow</a>
+            <button type="button" id="new-workflow" class="btn-primary"><i data-lucide="plus" aria-hidden="true"></i> New Workflow</button>
             <a href="#templates" class="btn"><i data-lucide="layers" aria-hidden="true"></i> Browse Templates</a>
+        </section>
+        <section>
+            <h2>Saved Workflows</h2>
+            <ul id="saved-workflows" class="run-list"><li class="empty">Loading workflows...</li></ul>
         </section>
         <section>
             <h2>Recent Runs</h2>
@@ -32,7 +36,7 @@ function escapeHTML(value = '') {
     })[char]);
 }
 
-async function loadDashboardData() {
+async function loadDashboardData(showNotification) {
     const [workflows, runs] = await Promise.all([getWorkflows(), getRuns()]);
     const workflowCount = document.getElementById('stat-workflows');
     const runCount = document.getElementById('stat-runs');
@@ -42,6 +46,33 @@ async function loadDashboardData() {
     runCount.textContent = runs.length;
     const successful = runs.filter(run => run.status === 'success').length;
     successRate.textContent = runs.length ? `${Math.round(successful / runs.length * 100)}%` : '0%';
+
+    const saved = document.getElementById('saved-workflows');
+    if (saved) {
+        saved.innerHTML = workflows.slice(0, 5).map(workflow => `
+            <li class="dashboard-run-item">
+                <div><strong>${escapeHTML(workflow.name || 'Untitled Workflow')}</strong>
+                <p>Updated ${new Date(workflow.updatedAt || workflow.createdAt).toLocaleString()}</p></div>
+                <button type="button" class="btn-primary open-workflow" data-workflow-id="${escapeHTML(workflow.id)}">Open</button>
+            </li>
+        `).join('') || '<li class="empty">No saved workflows yet. Create your first workflow.</li>';
+
+        saved.querySelectorAll('.open-workflow').forEach(button => {
+            button.addEventListener('click', async () => {
+                button.disabled = true;
+                try {
+                    const loaded = await loadWorkflowById(button.dataset.workflowId);
+                    if (!loaded) throw new Error('The selected workflow could not be opened.');
+                    window.location.hash = '#builder';
+                } catch (error) {
+                    console.error('Workflow could not be opened:', error);
+                    showNotification('Unable to open the selected workflow.');
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+    }
 
     const recent = document.getElementById('recent-runs');
     if (!recent) return;
@@ -64,13 +95,26 @@ export function initializeNavigation(showNotification) {
         if (!content) return;
 
         try {
-            if (route === '#builder') await waitForWorkflowRestore();
+            await waitForWorkflowRestore();
             if (requestId !== routeRequest) return;
 
             switch (route) {
                 case '#dashboard':
                     content.innerHTML = renderDashboard();
-                    loadDashboardData().catch(error => console.error('Dashboard data could not be loaded:', error));
+                    content.querySelector('#new-workflow')?.addEventListener('click', async event => {
+                        const button = event.currentTarget;
+                        button.disabled = true;
+                        try {
+                            await createNewWorkflow();
+                            window.location.hash = '#builder';
+                        } catch (error) {
+                            console.error('New workflow could not be created:', error);
+                            showNotification('Unable to create a new workflow. Save the current workflow and try again.');
+                        } finally {
+                            button.disabled = false;
+                        }
+                    });
+                    loadDashboardData(showNotification).catch(error => console.error('Dashboard data could not be loaded:', error));
                     break;
                 case '#builder':
                     content.innerHTML = renderBuilder();
@@ -85,10 +129,10 @@ export function initializeNavigation(showNotification) {
                     });
                     break;
                 case '#templates':
-                    await renderTemplatesPage(content);
+                    await renderTemplatesPage(content, () => requestId === routeRequest);
                     break;
                 case '#settings':
-                    await renderSettingsPage(content);
+                    await renderSettingsPage(content, () => requestId === routeRequest);
                     break;
                 default:
                     window.location.hash = '#dashboard';

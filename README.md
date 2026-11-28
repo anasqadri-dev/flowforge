@@ -2,164 +2,169 @@
 
 ### Build workflows. Connect actions. Automate everything.
 
-**FlowForge** is a browser-based visual workflow automation platform that allows users to create, configure, and execute automated workflows without writing code.
+**FlowForge** is a browser-based visual workflow automation platform that lets users create, configure, and execute automated workflows without writing application code.
 
-Users can drag workflow boxes onto a Drawflow-powered visual canvas, connect them to define execution order, configure their behavior, and execute the workflow through a built-in JavaScript execution engine. Drawflow's JSON import/export is used to synchronize the visual editor with FlowForge's internal workflow model; IndexedDB remains the primary workflow storage.
+Users add workflow boxes to a Drawflow-powered canvas, connect them to define execution paths, configure each action, and run the workflow through a built-in JavaScript execution engine. Drawflow handles visual editing and JSON import/export; FlowForge's internal state remains the source of truth, while IndexedDB stores workflows, execution records, and application settings.
 
-The application runs entirely in the browser and uses IndexedDB for local data persistence. Drawflow provides the visual node editor, while FlowForge's internal state remains the source of truth for execution and persistence. Timer-based workflows execute only while the application tab remains open. No backend server, external database, or frontend framework is required. The interface uses Lucide SVG icons instead of emoji-based interface elements.
+The application runs entirely in the browser. It does not require a backend server, external database, frontend framework, Node.js, or npm. Timer-based workflows execute only while the application tab remains open. HTTP Request nodes are subject to browser networking rules, including CORS restrictions.
 
 ---
 
-## Project Information
+## Project information
 
-| Detail       | Information                    |
-| ------------ | ------------------------------ |
-| University   | Sukkur IBA University          |
-| Department   | Department of Computer Science |
-| Course       | Web Engineering Theory         |
-| Course Level | BS-V Software Engineering      |
-| Section      | A                              |
-| Semester     | Fall 2026                      |
-| Instructor   | Sir Nisar Ahmed Siddiqui       |
-| Project Name | FlowForge                      |
-| Project Type | Academic Final Project         |
+| Detail | Information |
+| --- | --- |
+| University | Sukkur IBA University |
+| Department | Department of Computer Science |
+| Course | Web Engineering Theory |
+| Course level | BS-V Software Engineering |
+| Section | A |
+| Semester | Fall 2026 |
+| Instructor | Sir Nisar Ahmed Siddiqui |
+| Project type | Academic final project |
 
-## Team Members
+## Team members
 
-| Name                | Role              |
-| ------------------- | ----------------- |
+| Name | Role |
+| --- | --- |
 | Muhammad Anas Qadri | Project Developer |
-| Pirha Mahar         | Project Developer |
+| Pirha Mahar | Project Developer |
 
-## Overview
+## Features
 
-Traditional workflow automation platforms can be complex, require accounts, depend on cloud infrastructure, or introduce unnecessary overhead for beginners.
+- Visual workflow builder with drag-and-drop nodes, connections, zoom, and pan.
+- Dynamic configuration forms for workflow nodes.
+- Workflow execution with sequential steps, conditions, and bounded loop bodies.
+- Variable interpolation between workflow steps.
+- Execution history with step-level inputs, outputs, and errors.
+- Create multiple workflows, reopen saved workflows from the Dashboard, and automatically save through IndexedDB.
+- JSON workflow import and export.
+- Built-in and user-created workflow templates.
+- Light and dark themes.
+- Responsive application layout.
 
-FlowForge aims to provide a lightweight alternative that runs directly in the browser.
+## Technology stack
 
-The platform provides a visual workflow builder where users can:
+| Technology | Purpose |
+| --- | --- |
+| HTML5 | Application structure |
+| CSS3 | Styling and responsive layout |
+| Vanilla JavaScript (ES modules) | Application logic |
+| Drawflow 0.0.60 | Visual node editor |
+| Lucide 0.468.0 | Interface icons |
+| IndexedDB | Local application persistence |
+| Local Storage | Small active-workflow and theme preferences |
+| HTML Drag and Drop API | Adding nodes from the box library |
+| Git and GitHub | Version control and collaboration |
+| GitHub Pages | Static hosting |
 
-- Create workflows using drag-and-drop boxes.
-- Connect boxes using visual SVG connections.
-- Configure individual workflow actions.
-- Pass data between boxes using variables.
-- Execute workflows using a built-in execution engine.
-- View execution history and logs.
-- Save workflows locally using IndexedDB.
-- Import and export workflows as JSON files.
-- Use predefined workflow templates.
+**Development restriction:** The project uses vanilla HTML, CSS, and JavaScript. It intentionally has no frontend framework or backend service.
 
-## Technology Stack
+## Core modules
 
-| Technology                              | Purpose                                   |
-| --------------------------------------- | ----------------------------------------- |
-| HTML5                                   | Application structure                     |
-| CSS3                                    | Styling and responsive interface          |
-| Vanilla JavaScript                      | Application logic and interactions        |
-| Drawflow                                | Visual node editor, node positions, and connections |
-| Lucide Icons                            | Consistent interface icons (CDN)            |
-| IndexedDB                               | Local browser persistence                 |
-| HTML Drag and Drop API                  | Dragging node types from the box library  |
-| Git & GitHub                            | Version control and collaboration         |
-| GitHub Pages                            | Application deployment                    |
+| Module | Description |
+| --- | --- |
+| M1 — App Shell | Navigation, responsive layout, themes, and notifications |
+| M2 — Builder Screen | Interactive canvas, draggable boxes, connections, undo/redo, zoom, and pan |
+| M3 — Box Menu | Searchable and categorized workflow box library |
+| M4 — Settings Form | Dynamic configuration, input validation, and variable interpolation |
+| M5 — Workflow Engine | Execution order, graph validation, cycle detection, and error handling |
+| M6 — Run History | Execution records, step timelines, outputs, and errors |
+| M7 — Persistence | IndexedDB storage, automatic saving, and JSON import/export |
+| M8 — Templates and Settings | Pre-built workflows and application preferences |
 
-**Development restriction:** The application is built using vanilla HTML, CSS, and JavaScript without frontend frameworks or backend services.
+## Project structure
 
-## Core Modules
+```text
+.
+├── .github/
+│   └── workflows/
+│       └── validate.yml
+├── index.html
+├── src/
+│   ├── css/
+│   │   ├── app-shell.css
+│   │   ├── components.css
+│   │   ├── layout.css
+│   │   ├── reset.css
+│   │   ├── responsive.css
+│   │   └── variables.css
+│   └── js/
+│       ├── app.js
+│       ├── components/
+│       │   ├── clipboard.js
+│       │   ├── editor.js
+│       │   ├── nodes.js
+│       │   ├── notifications.js
+│       │   ├── settings-panel.js
+│       │   └── sidebar.js
+│       ├── core/
+│       │   ├── database.js
+│       │   ├── engine.js
+│       │   ├── handlers.js
+│       │   ├── icons.js
+│       │   ├── navigation.js
+│       │   ├── persistence.js
+│       │   ├── state.js
+│       │   └── theme.js
+│       └── pages/
+│           ├── builder.js
+│           ├── runs.js
+│           ├── settings.js
+│           └── templates.js
+├── docs/
+│   ├── FlowForge_Muhammad-Anas-Qadri_053-24-0016.pdf
+│   └── TESTING.md
+├── LICENSE
+└── README.md
+```
 
-| Module                    | Description                                                                |
-| ------------------------- | -------------------------------------------------------------------------- |
-| M1 — App Shell            | Navigation, responsive layout, themes, and notifications                   |
-| M2 — Builder Screen       | Interactive canvas, draggable boxes, connections, undo/redo, zoom, and pan |
-| M3 — Box Menu             | Searchable and categorized workflow box library                            |
-| M4 — Settings Form        | Dynamic configuration, input validation, and variable interpolation        |
-| M5 — Workflow Engine      | Execution order, graph validation, cycle detection, and error handling     |
-| M6 — Run History          | Execution records, step timelines, inputs, outputs, and errors             |
-| M7 — Persistence          | IndexedDB storage, automatic saving, and JSON import/export                |
-| M8 — Templates & Settings | Pre-built workflows and application preferences                            |
-
-## Project Structure
-
-The project follows a modular JavaScript architecture to keep the interface, workflow engine, storage, and individual components separated.
-
-- `src/css/` — Stylesheets and themes.
-- `src/js/core/` — Workflow engine and core logic.
-- `src/js/components/` — Drawflow editor integration, node interactions, settings panels, and notifications.
-- `src/js/core/` — Workflow state, execution engine, handlers, IndexedDB, persistence, navigation, themes, and icons.
-- `src/js/pages/` — Builder, Runs, Templates, and Settings screens.
-- `src/css/` — Application shell, layout, components, responsive rules, and theme variables.
-- `docs/` — Project documentation and diagrams.
-- `docs/` — Technical documentation and diagrams.
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
-- A modern web browser.
+- A modern browser with IndexedDB support.
 - Git.
-- A code editor such as Visual Studio Code.
-- A local development server.
+- Visual Studio Code or another code editor.
+- A local static development server.
 
-### Installation
+### Run locally
 
 Clone the repository:
 
 ```bash
 git clone https://github.com/anasqadri-dev/flowforge.git
-```
-
-Navigate to the project directory:
-
-```bash
 cd flowforge
 ```
 
-Start a local development server.
-
-For example, using the VS Code Live Server extension, open `index.html` with Live Server.
-
-Alternatively, use Python:
+Start a local server from the project root. For example:
 
 ```bash
 python -m http.server 5500
 ```
 
-Then open:
+Open [http://localhost:5500](http://localhost:5500) in your browser. VS Code Live Server can also be used.
 
-```text
-http://localhost:5500
-```
+Opening `index.html` directly with a `file://` URL is not recommended because the application uses JavaScript modules and browser storage APIs.
 
-## Development Guidelines
+## Testing and known limitations
 
-To maintain a clean and collaborative codebase:
+The repository currently uses a manual browser acceptance-test workflow; it does not include an automated unit or end-to-end test suite. Before release, verify the scenarios in [docs/TESTING.md](docs/TESTING.md).
 
-1. Keep JavaScript modules focused on a single responsibility.
-2. Use meaningful variable and function names.
-3. Avoid unnecessary dependencies and frameworks.
-4. Test features before merging them into the main branch.
-5. Use feature branches for new functionality.
-6. Submit changes through pull requests.
-7. Update documentation when introducing major features.
-
-## Project Goals
-
-- Develop a functional visual workflow editor.
-- Implement a browser-based workflow execution engine.
-- Support configurable workflow actions, conditional paths, and bounded loop bodies.
-- Provide reliable local persistence.
-- Maintain a responsive and accessible user interface.
-- Demonstrate practical Web Engineering concepts.
+- Workflow data is local to the browser profile and is not synchronized across devices.
+- Timer-based workflows require the application tab to remain open.
+- HTTP requests may fail when a target service does not allow cross-origin browser requests.
+- A workflow must contain exactly one start node before it can execute.
+- Ordinary action nodes support one outgoing connection; Condition nodes provide two decision branches.
+- Loop bodies are bounded and must be configured as a single connected path.
 
 ## Deployment
 
-FlowForge is designed to be deployed using **GitHub Pages**, allowing users to access the application through a web browser.
-
-All application data remains in the user's browser through IndexedDB. HTTP requests made by user-created workflows may still communicate with external services when configured, subject to browser security and CORS restrictions.
+FlowForge is deployed as a static site through GitHub Pages. Application data remains in the user's browser; no application backend is involved.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 

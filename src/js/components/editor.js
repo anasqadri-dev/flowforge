@@ -1,4 +1,4 @@
-import { state, replaceWorkflowState } from '../core/state.js';
+import { state } from '../core/state.js';
 
 let editor = null;
 let importing = false;
@@ -25,10 +25,16 @@ const icons = {
     'Send Notification': 'bell', 'Write to Log': 'file-text'
 };
 
-function drawflowNodeId(appId, index) { return String(index + 1); }
+function drawflowNodeId(index) { return String(index + 1); }
 
 export function getDrawflowEditor() { return editor; }
 export function isImportingDrawflow() { return importing; }
+
+function escapeHTML(value = '') {
+    return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+}
 
 export function createDrawflowNodeHtml(type, config = {}) {
     const icon = icons[type] || 'workflow';
@@ -36,7 +42,7 @@ export function createDrawflowNodeHtml(type, config = {}) {
         : type === 'Wait' && config.seconds !== undefined ? ' · ' + config.seconds + 's'
         : type === 'Set Variable' && config.name ? ' · ' + config.name
         : type === 'Loop' && config.count ? ' · ' + config.count + ' iterations' : '';
-    return '<div class="drawflow-node-inner"><span class="node-icon"><i data-lucide="' + icon + '" aria-hidden="true"></i></span><span class="node-text">' + type + suffix + '</span></div>';
+    return '<div class="drawflow-node-inner"><span class="node-icon"><i data-lucide="' + escapeHTML(icon) + '" aria-hidden="true"></i></span><span class="node-text">' + escapeHTML(type) + escapeHTML(suffix) + '</span></div>';
 }
 
 export function getNodePortCounts(type) {
@@ -55,7 +61,7 @@ export function registerDrawflowNode(drawflowId, appNodeId) {
 export function exportStateToDrawflow() {
     const data = {};
     const ids = new Map();
-    state.nodes.forEach((node, index) => ids.set(node.id, drawflowNodeId(node.id, index)));
+    state.nodes.forEach((node, index) => ids.set(node.id, drawflowNodeId(index)));
     state.nodes.forEach((node, index) => {
         const id = drawflowNodeId(node.id, index);
         const ports = getNodePortCounts(node.type);
@@ -81,35 +87,6 @@ export function exportStateToDrawflow() {
         target.inputs[input].connections.push({ node: sourceId, input: output });
     });
     return { drawflow: { Home: { data } } };
-}
-
-export function syncStateFromDrawflow() {
-    if (!editor || importing) return;
-    const exported = editor.export();
-    const moduleName = editor.getModule() || 'Home';
-    const data = exported?.drawflow?.[moduleName]?.data || {};
-    const nodes = Object.values(data).map(node => ({
-        id: node.data?.appNodeId || String(node.id),
-        type: node.data?.nodeType || node.name,
-        x: Number(node.pos_x) || 0, y: Number(node.pos_y) || 0,
-        config: structuredClone(node.data?.config || {})
-    }));
-    const connections = [];
-    Object.values(data).forEach(node => {
-        const from = node.data?.appNodeId || String(node.id);
-        Object.entries(node.outputs || {}).forEach(([outputKey, output]) => {
-            (output.connections || []).forEach(connection => {
-                const target = data[connection.node];
-                const to = target?.data?.appNodeId || (target ? String(target.id) : null);
-                if (!to) return;
-                connections.push({
-                    from, to,
-                    ...(node.name === 'Condition' ? { branch: outputKey === 'output_2' ? 'false' : 'true', sourceHandle: outputKey } : {})
-                });
-            });
-        });
-    });
-    replaceWorkflowState({ nodes, connections });
 }
 
 export function renderDrawflowFromState() {

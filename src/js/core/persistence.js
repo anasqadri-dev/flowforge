@@ -1,13 +1,25 @@
 import {
     saveWorkflow,
     getWorkflows,
-    getWorkflow
+    getWorkflow,
+    getSetting
 } from './database.js';
 import { state, replaceWorkflowState } from './state.js';
 
 let saveTimer = null;
 let notificationCallback = null;
 let restorePromise = Promise.resolve();
+let isRestoring = false;
+
+function readActiveWorkflowId() {
+    try { return localStorage.getItem('flowforge-active-workflow'); }
+    catch (error) { console.warn('Local Storage is unavailable; using IndexedDB workflow ordering.', error); return null; }
+}
+
+function writeActiveWorkflowId(id) {
+    try { localStorage.setItem('flowforge-active-workflow', id); }
+    catch (error) { console.warn('The active workflow pointer could not be stored in Local Storage.', error); }
+}
 
 function notify(message) {
     if (notificationCallback) notificationCallback(message);
@@ -37,7 +49,7 @@ export async function saveCurrentWorkflow(showMessage = true) {
         await saveWorkflow(workflow);
         state.workflowId = workflow.id;
         state.createdAt = workflow.createdAt;
-        localStorage.setItem('flowforge-active-workflow', workflow.id);
+        writeActiveWorkflowId(workflow.id);
         if (showMessage) notify('Workflow saved successfully.');
         return workflow;
     } catch (error) {
@@ -48,6 +60,7 @@ export async function saveCurrentWorkflow(showMessage = true) {
 }
 
 function scheduleAutoSave() {
+    if (isRestoring) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveCurrentWorkflow(false), 700);
 }
@@ -75,17 +88,47 @@ export async function loadWorkflowById(id) {
 }
 
 async function restoreLatestWorkflow() {
+    isRestoring = true;
     try {
         const workflows = await getWorkflows();
-        const activeId = localStorage.getItem('flowforge-active-workflow');
+        const activeId = readActiveWorkflowId();
         const active = activeId ? await getWorkflow(activeId) : null;
         const workflow = active || workflows[0];
-        if (workflow) await loadWorkflowById(workflow.id);
-        else replaceWorkflowState({ nodes: [], connections: [] });
+        if (workflow) {
+            await loadWorkflowById(workflow.id);
+        } else {
+            const preferences = await getSetting('preferences').catch(() => null);
+            state.workflowName = preferences?.defaultWorkflowName || 'Untitled Workflow';
+            replaceWorkflowState({ nodes: [], connections: [] });
+        }
     } catch (error) {
         console.error('Unable to restore workflow:', error);
         replaceWorkflowState({ nodes: [], connections: [] });
+    } finally {
+        isRestoring = false;
     }
+}
+
+export async function createNewWorkflow() {
+    await waitForWorkflowRestore();
+    cancelPendingAutoSave();
+
+    // Preserve the current workflow before switching to a new empty one.
+    if (state.workflowId || state.nodes.length || state.connections.length) {
+        const saved = await saveCurrentWorkflow(false);
+        if (!saved) throw new Error('The current workflow could not be saved.');
+    }
+
+    const preferences = await getSetting('preferences').catch(() => null);
+    state.workflowId = crypto.randomUUID();
+    state.workflowName = preferences?.defaultWorkflowName || 'Untitled Workflow';
+    state.createdAt = Date.now();
+    replaceWorkflowState({ nodes: [], connections: [] });
+    cancelPendingAutoSave();
+
+    const created = await saveCurrentWorkflow(false);
+    if (!created) throw new Error('A new workflow could not be created.');
+    return created;
 }
 
 export function waitForWorkflowRestore() {
@@ -116,7 +159,7 @@ export function exportWorkflow() {
     }
 }
 
-export function validateWorkflow(workflow, { requireStart = false } = {}) {
+export function validateWorkflow(workflow, { requireStart = false, strictConnections = false } = {}) {
     if (!workflow || typeof workflow !== 'object' ||
         !Array.isArray(workflow.nodes) || !Array.isArray(workflow.connections)) {
         throw new Error('Invalid workflow file structure.');
@@ -137,17 +180,52 @@ export function validateWorkflow(workflow, { requireStart = false } = {}) {
     }
 
     const edges = new Set();
+    const nodeById = new Map(workflow.nodes.map(node => [node.id, node]));
+    const outgoingById = new Map(workflow.nodes.map(node => [node.id, []]));
+    const conditionPorts = new Set();
+
     for (const connection of workflow.connections) {
         if (!connection || !ids.has(connection.from) || !ids.has(connection.to) ||
             connection.from === connection.to) {
             throw new Error('Workflow contains an invalid connection.');
         }
+
+        const sourceNode = nodeById.get(connection.from);
+        const targetNode = nodeById.get(connection.to);
         const key = `${connection.from}->${connection.to}`;
         if (edges.has(key)) throw new Error('Workflow contains duplicate connections.');
         edges.add(key);
+
+        if (strictConnections) {
+            if (['Manual Start', 'Timer (Schedule)'].includes(targetNode.type)) {
+                throw new Error('Start nodes cannot receive incoming connections.');
+            }
+            if (['Send Notification', 'Write to Log'].includes(sourceNode.type)) {
+                throw new Error('Output nodes cannot have outgoing connections.');
+            }
+
+            const outgoing = outgoingById.get(connection.from);
+            if (sourceNode.type === 'Condition') {
+                const port = connection.sourceHandle || (connection.branch === 'false' ? 'output_2' : 'output_1');
+                if (!['output_1', 'output_2'].includes(port)) {
+                    throw new Error('Condition connections must use a valid output port.');
+                }
+                if (connection.branch && connection.branch !== (port === 'output_2' ? 'false' : 'true')) {
+                    throw new Error('Condition branch labels do not match their output ports.');
+                }
+                const portKey = `${connection.from}:${port}`;
+                if (conditionPorts.has(portKey)) {
+                    throw new Error('Each Condition output port can have only one connection.');
+                }
+                conditionPorts.add(portKey);
+            } else if (outgoing.length > 0) {
+                throw new Error('Ordinary nodes can have only one outgoing connection.');
+            }
+            outgoing.push(connection);
+        }
     }
     const starts = workflow.nodes.filter(node => ['Manual Start', 'Timer (Schedule)'].includes(node.type));
-    if (starts.length > 1 || (requireStart && starts.length !== 1)) {
+    if ((strictConnections && starts.length > 1) || (requireStart && starts.length !== 1)) {
         throw new Error('Workflow must contain exactly one start node.');
     }
     const indegree = new Map(workflow.nodes.map(node => [node.id, 0]));
@@ -164,7 +242,7 @@ async function importWorkflow(file) {
     try {
         if (!file || file.size > 5 * 1024 * 1024) throw new Error('Workflow file must be smaller than 5 MB.');
         const workflow = JSON.parse(await file.text());
-        validateWorkflow(workflow, { requireStart: true });
+        validateWorkflow(workflow, { requireStart: true, strictConnections: true });
 
         state.workflowId = crypto.randomUUID();
         state.workflowName = String(workflow.name || 'Imported Workflow').slice(0, 100);

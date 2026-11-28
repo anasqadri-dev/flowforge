@@ -106,34 +106,6 @@ function chooseConditionEdge(edges, result) {
     return edges[result ? 0 : 1] || null;
 }
 
-function chooseLoopBodyEdge(edges) {
-    return edges.find(edge => ['body', 'loop', 'repeat'].includes(
-        String(edge.branch || edge.sourceHandle || '').toLowerCase()
-    )) || edges[0] || null;
-}
-
-function findLoopRegion(loopId, bodyStart, adjacency, nodeMap) {
-    const body = [];
-    const visited = new Set([loopId]);
-    let current = bodyStart;
-    while (current && !visited.has(current)) {
-        visited.add(current);
-        const node = nodeMap.get(current);
-        if (!node) break;
-        body.push(node);
-        const outgoing = adjacency.get(current) || [];
-        if (outgoing.length === 0) {
-            current = null;
-            break;
-        }
-        if (outgoing.length !== 1) {
-            throw new Error('A Loop body must be a single connected path with one outgoing connection per step.');
-        }
-        current = outgoing[0].to;
-    }
-    return { body, continuationId: current && !visited.has(current) ? current : null };
-}
-
 export async function runWorkflow(nodes, connections, initialContext = {}, metadata = {}) {
     const runId = crypto.randomUUID();
     const startedAt = Date.now();
