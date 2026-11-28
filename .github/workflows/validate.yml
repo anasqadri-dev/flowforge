@@ -41,6 +41,9 @@ jobs:
       - name: Test workflow engine execution
         run: node scripts/validate-engine.mjs
 
+      - name: Test advanced CSV utilities
+        run: node scripts/validate-advanced.mjs
+
       - name: Verify relative imports
         run: |
           node --input-type=module <<'NODE'
