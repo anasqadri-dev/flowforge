@@ -16,6 +16,8 @@ function downloadJSON(data, filename) {
 }
 
 export async function createApplicationBackup() {
+    const { saveCurrentWorkflow } = await import('./persistence.js');
+    await saveCurrentWorkflow(false);
     const [workflows, runs] = await Promise.all([getWorkflows(), getRuns()]);
     const settings = {};
     for (const key of SETTINGS_KEYS) {
@@ -77,6 +79,8 @@ export async function restoreApplicationBackup(file) {
     }
     const backup = validateBackup(JSON.parse(await file.text()));
     const { workflows, runs, settings } = backup.contents;
+    const { validateWorkflow } = await import('./persistence.js');
+    for (const workflow of workflows) validateWorkflow(workflow);
     const summary = [
         `Workflows: ${workflows.length}`,
         `Execution records: ${runs.length}`,
