@@ -92,7 +92,8 @@ export async function renderSettingsPage(container, isCurrent = () => true) {
             state.createdAt = null;
             replaceWorkflowState({ nodes: [], connections: [] });
             cancelPendingAutoSave();
-            localStorage.removeItem('flowforge-active-workflow');
+            try { localStorage.removeItem('flowforge-active-workflow'); }
+            catch (storageError) { console.warn('Could not clear the active workflow pointer.', storageError); }
             showNotification('Application data cleared successfully.');
             window.location.hash = '#dashboard';
         } catch (error) {
