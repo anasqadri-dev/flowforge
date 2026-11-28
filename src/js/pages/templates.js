@@ -4,132 +4,238 @@ import { saveCurrentWorkflow } from '../core/persistence.js';
 import { showNotification } from '../components/notifications.js';
 import { refreshIcons } from '../core/icons.js';
 
-const BUILT_IN_TEMPLATES = [
-  {
-    id: 'http-log',
-    name: 'HTTP Request Logger',
-    description: 'Send an HTTP request and log the response.',
-    category: 'API Automation',
+function makeLinearTemplate({ id, name, description, category, steps }) {
+  const nodes = [
+    { id: 'n1', type: 'Manual Start', x: 80, y: 140, config: {} },
+    ...steps.map((step, index) => ({
+      id: 'n' + (index + 2),
+      type: step.type,
+      x: 80 + (index + 1) * 220,
+      y: 140,
+      config: structuredClone(step.config || {})
+    }))
+  ];
+
+  return {
+    id, name, description, category, nodes,
+    connections: nodes.slice(1).map((node, index) => ({
+      id: 'c' + (index + 1),
+      from: nodes[index].id,
+      to: node.id
+    }))
+  };
+}
+
+function makeStatusRouterTemplate() {
+  return {
+    id: 'api-status-router',
+    name: 'API Status Checker',
+    description: 'Call a public demo API, check its HTTP status, and log success or failure on separate branches.',
+    category: 'API Monitoring',
     nodes: [
-      {
-        id: 'n1',
-        type: 'Manual Start',
-        x: 80,
-        y: 100,
-        config: {}
-      },
-      {
-        id: 'n2',
-        type: 'HTTP Request',
-        x: 300,
-        y: 100,
-        config: {
-          url: 'https://jsonplaceholder.typicode.com/posts/1',
-          method: 'GET',
-          headers: '',
-          body: ''
-        }
-      },
-      {
-        id: 'n3',
-        type: 'Write to Log',
-        x: 520,
-        y: 100,
-        config: {
-          message: 'API request completed'
-        }
-      }
-    ],
-    connections: [
-      { id: 'c1', from: 'n1', to: 'n2' },
-      { id: 'c2', from: 'n2', to: 'n3' }
-    ]
-  },
-  {
-    id: 'variable-workflow',
-    name: 'Variable Manager',
-    description: 'Create a variable, wait, and display its value.',
-    category: 'Data Automation',
-    nodes: [
-      {
-        id: 'n1',
-        type: 'Manual Start',
-        x: 80,
-        y: 100,
-        config: {}
-      },
-      {
-        id: 'n2',
-        type: 'Set Variable',
-        x: 300,
-        y: 100,
-        config: {
-          name: 'username',
-          value: 'FlowForge User'
-        }
-      },
-      {
-        id: 'n3',
-        type: 'Wait',
-        x: 520,
-        y: 100,
-        config: {
-          seconds: 2
-        }
-      },
-      {
-        id: 'n4',
-        type: 'Write to Log',
-        x: 740,
-        y: 100,
-        config: {
-          message: 'Workflow completed'
-        }
-      }
+      { id: 'n1', type: 'Manual Start', x: 80, y: 180, config: {} },
+      { id: 'n2', type: 'HTTP Request', x: 300, y: 180, config: {
+        url: 'https://jsonplaceholder.typicode.com/posts/1', method: 'GET', headers: '', body: '', timeoutSeconds: 15
+      }},
+      { id: 'n3', type: 'Condition', x: 540, y: 180, config: {
+        left: '{{n2.status}}', operator: '==', right: '200'
+      }},
+      { id: 'n4', type: 'Write to Log', x: 800, y: 90, config: {
+        message: 'API health check passed. HTTP status: {{n2.status}}'
+      }},
+      { id: 'n5', type: 'Write to Log', x: 800, y: 300, config: {
+        message: 'API health check did not return HTTP 200.'
+      }}
     ],
     connections: [
       { id: 'c1', from: 'n1', to: 'n2' },
       { id: 'c2', from: 'n2', to: 'n3' },
-      { id: 'c3', from: 'n3', to: 'n4' }
+      { id: 'c3', from: 'n3', to: 'n4', branch: 'true', sourceHandle: 'output_1' },
+      { id: 'c4', from: 'n3', to: 'n5', branch: 'false', sourceHandle: 'output_2' }
     ]
-  },
+  };
+}
+
+const BUILT_IN_TEMPLATES = [
   {
-    id: 'notification-workflow',
-    name: 'Notification Automation',
-    description: 'Wait for a short duration and send a notification.',
-    category: 'Productivity',
+    id: 'http-log',
+    name: 'HTTP Request Logger',
+    description: 'Fetch a sample API record and log the returned HTTP status and data.',
+    category: 'API Automation',
     nodes: [
-      {
-        id: 'n1',
-        type: 'Manual Start',
-        x: 80,
-        y: 100,
-        config: {}
-      },
-      {
-        id: 'n2',
-        type: 'Wait',
-        x: 300,
-        y: 100,
-        config: {
-          seconds: 3
-        }
-      },
-      {
-        id: 'n3',
-        type: 'Send Notification',
-        x: 520,
-        y: 100,
-        config: {
-          message: 'Your FlowForge workflow has finished!'
-        }
-      }
+      { id: 'n1', type: 'Manual Start', x: 80, y: 140, config: {} },
+      { id: 'n2', type: 'HTTP Request', x: 300, y: 140, config: {
+        url: 'https://jsonplaceholder.typicode.com/posts/1', method: 'GET', headers: '', body: '', timeoutSeconds: 15
+      }},
+      { id: 'n3', type: 'Write to Log', x: 540, y: 140, config: {
+        message: 'Request finished with HTTP {{n2.status}}. Response: {{n2.data}}'
+      }}
     ],
     connections: [
       { id: 'c1', from: 'n1', to: 'n2' },
       { id: 'c2', from: 'n2', to: 'n3' }
     ]
-  }
+  },
+  makeLinearTemplate({
+    id: 'variable-workflow', name: 'Variable Manager',
+    description: 'Set reusable workflow variables, pause briefly, and log a completion message.',
+    category: 'Data Automation',
+    steps: [
+      { type: 'Set Variable', config: { name: 'username', value: 'FlowForge User' } },
+      { type: 'Wait', config: { seconds: 2 } },
+      { type: 'Write to Log', config: { message: 'Completed task for {{username}}.' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'notification-workflow', name: 'Notification Automation',
+    description: 'Send a browser notification after a short delay. Browser notification permission is required.',
+    category: 'Productivity',
+    steps: [
+      { type: 'Wait', config: { seconds: 3 } },
+      { type: 'Send Notification', config: { message: 'Your FlowForge task is ready for review.' } }
+    ]
+  }),
+
+  // Additional practical templates (12).
+  makeStatusRouterTemplate(),
+  makeLinearTemplate({
+    id: 'api-record-lookup', name: 'API Record Lookup',
+    description: 'Look up a record by an editable ID, then log the returned record. Change the ID variable to reuse it.',
+    category: 'API Automation',
+    steps: [
+      { type: 'Set Variable', config: { name: 'recordId', value: '1' } },
+      { type: 'HTTP Request', config: { url: 'https://jsonplaceholder.typicode.com/posts/{{recordId}}', method: 'GET', headers: '', body: '', timeoutSeconds: 15 } },
+      { type: 'Write to Log', config: { message: 'Record {{recordId}} response: {{n3.data}}' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'json-payload-builder', name: 'JSON Payload Builder',
+    description: 'Assemble a reusable JSON-style payload from variables and inspect the result in the execution log.',
+    category: 'Data Preparation',
+    steps: [
+      { type: 'Set Variable', config: { name: 'customerName', value: 'Ayesha Khan' } },
+      { type: 'Set Variable', config: { name: 'orderNumber', value: 'ORD-1042' } },
+      { type: 'Transform Data', config: { input: '{ "customer": "{{customerName}}", "order": "{{orderNumber}}", "source": "FlowForge" }' } },
+      { type: 'Write to Log', config: { message: 'Prepared payload: {{n4.result}}' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'text-cleanup', name: 'Text Cleanup Pipeline',
+    description: 'Normalize a text value by trimming it and preparing a clean output for downstream steps.',
+    category: 'Data Preparation',
+    steps: [
+      { type: 'Set Variable', config: { name: 'rawText', value: '  New customer inquiry received  ' } },
+      { type: 'Transform Data', config: { input: '{{rawText}}' } },
+      { type: 'Write to Log', config: { message: 'Cleaned text value: {{n3.result}}' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'post-json-webhook', name: 'Send JSON to Webhook',
+    description: 'Build a sample event payload and POST it to an HTTP test endpoint. Replace the URL with your own webhook.',
+    category: 'API Automation',
+    steps: [
+      { type: 'Set Variable', config: { name: 'eventType', value: 'order.created' } },
+      { type: 'Set Variable', config: { name: 'orderId', value: 'ORD-1042' } },
+      { type: 'HTTP Request', config: {
+        url: 'https://httpbin.org/post', method: 'POST',
+        headers: '{ "Content-Type": "application/json" }',
+        body: '{ "event": "{{eventType}}", "orderId": "{{orderId}}" }',
+        timeoutSeconds: 20
+      }},
+      { type: 'Write to Log', config: { message: 'Webhook test returned HTTP {{n4.status}}.' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'api-delete-record', name: 'Delete Demo API Record',
+    description: 'Demonstrate a DELETE request against a public mock API. The mock service does not persist real deletions.',
+    category: 'API Automation',
+    steps: [
+      { type: 'Set Variable', config: { name: 'recordId', value: '1' } },
+      { type: 'HTTP Request', config: {
+        url: 'https://jsonplaceholder.typicode.com/posts/{{recordId}}', method: 'DELETE',
+        headers: '', body: '', timeoutSeconds: 15
+      }},
+      { type: 'Write to Log', config: { message: 'Demo DELETE request returned HTTP {{n3.status}} for record {{recordId}}.' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'api-data-summary', name: 'API Response Summary',
+    description: 'Retrieve a sample post, extract selected fields, and produce a compact human-readable summary.',
+    category: 'Reporting',
+    steps: [
+      { type: 'HTTP Request', config: {
+        url: 'https://jsonplaceholder.typicode.com/posts/1', method: 'GET',
+        headers: '', body: '', timeoutSeconds: 15
+      }},
+      { type: 'Transform Data', config: { input: 'Post #{{n2.data.id}} — {{n2.data.title}}' } },
+      { type: 'Write to Log', config: { message: '{{n3.result}}' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'customer-welcome', name: 'Customer Welcome Notification',
+    description: 'Prepare a personalized welcome message and show it as a browser notification.',
+    category: 'Customer Operations',
+    steps: [
+      { type: 'Set Variable', config: { name: 'customerName', value: 'New Customer' } },
+      { type: 'Transform Data', config: { input: 'Welcome to our service, {{customerName}}. Your profile is ready.' } },
+      { type: 'Send Notification', config: { message: '{{n3.result}}' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'order-processing', name: 'Order Processing Checklist',
+    description: 'Simulate an order workflow by recording its reference, pausing for processing, and logging completion.',
+    category: 'Business Operations',
+    steps: [
+      { type: 'Set Variable', config: { name: 'orderId', value: 'ORD-2026-001' } },
+      { type: 'Set Variable', config: { name: 'orderStatus', value: 'Processing' } },
+      { type: 'Wait', config: { seconds: 2 } },
+      { type: 'Write to Log', config: { message: 'Order {{orderId}} moved to {{orderStatus}}.' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'support-ticket-triage', name: 'Support Ticket Triage',
+    description: 'Capture a sample support ticket, evaluate its priority, and route the result to a matching log branch.',
+    category: 'Customer Operations',
+    steps: [
+      { type: 'Set Variable', config: { name: 'ticketPriority', value: 'high' } },
+      { type: 'Condition', config: { left: '{{ticketPriority}}', operator: '==', right: 'high' } },
+      { type: 'Write to Log', config: { message: 'High-priority ticket: assign for urgent review.' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'data-validation', name: 'Required Field Validation',
+    description: 'Check whether a required customer email value is present and log a clear validation result.',
+    category: 'Data Quality',
+    steps: [
+      { type: 'Set Variable', config: { name: 'customerEmail', value: 'customer@example.com' } },
+      { type: 'Condition', config: { left: '{{customerEmail}}', operator: '!=', right: '' } },
+      { type: 'Write to Log', config: { message: 'Required email field is present.' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'delayed-follow-up', name: 'Delayed Follow-up Reminder',
+    description: 'Wait for a short configurable interval, then notify the operator to follow up on a pending item.',
+    category: 'Productivity',
+    steps: [
+      { type: 'Set Variable', config: { name: 'followUpItem', value: 'Pending customer response' } },
+      { type: 'Wait', config: { seconds: 5 } },
+      { type: 'Send Notification', config: { message: 'Follow up: {{followUpItem}}.' } }
+    ]
+  }),
+  makeLinearTemplate({
+    id: 'api-post-demo', name: 'Create Demo API Record',
+    description: 'Submit a sample JSON record to a mock REST API and log the created response identifier.',
+    category: 'API Automation',
+    steps: [
+      { type: 'HTTP Request', config: {
+        url: 'https://jsonplaceholder.typicode.com/posts', method: 'POST',
+        headers: '{ "Content-Type": "application/json" }',
+        body: '{ "title": "FlowForge demo", "body": "Sample workflow submission", "userId": 1 }',
+        timeoutSeconds: 15
+      }},
+      { type: 'Write to Log', config: { message: 'Mock API accepted the sample request. Returned response: {{n2.data}}' } }
+    ]
+  })
 ];
 
 function escapeHTML(value = '') {
