@@ -164,8 +164,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
 
     async function checkpoint(node) {
         if (control.cancelled) throw new Error('Workflow execution cancelled by user.');
-        if (control.stepBudget !== Infinity && control.stepBudget > 0) control.stepBudget--;
-        if (control.stepBudget === 0) control.paused = true;
+        if (control.stepBudget !== Infinity && control.stepBudget > 0) { control.stepBudget = Infinity; control.pauseAfterStep = true; }
         if (control.paused) {
             publishExecutionEvent('flowforge:debug-waiting', { runId, nodeId: node.id, type: node.type });
             await new Promise(resolve => { control.release = resolve; });
@@ -203,6 +202,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
             };
             steps.push(step);
             publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step });
+            if (control.pauseAfterStep) { control.pauseAfterStep = false; control.paused = true; publishExecutionEvent('flowforge:debug-paused', { runId, nodeId: node.id }); }
             return output;
         } catch (error) {
             const step = {
@@ -212,6 +212,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
             };
             steps.push(step);
             publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step });
+            if (control.pauseAfterStep) { control.pauseAfterStep = false; control.paused = true; publishExecutionEvent('flowforge:debug-paused', { runId, nodeId: node.id }); }
             throw error;
         }
     }
