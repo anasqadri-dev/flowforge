@@ -196,6 +196,18 @@ function initializeRunButton() {
         button.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i> Running...';
         refreshIcons(button);
         try {
+            // Request browser permission while the Run button's user gesture is
+            // still active; saveCurrentWorkflow() below is asynchronous.
+            if (state.nodes.some(node => node.type === 'Send Notification')
+                && 'Notification' in window
+                && Notification.permission === 'default') {
+                try {
+                    await Notification.requestPermission();
+                } catch (error) {
+                    console.warn('Browser notification permission request was unavailable:', error);
+                }
+            }
+
             await saveCurrentWorkflow(false);
             const result = await runWorkflow(state.nodes, state.connections, {}, {
                 workflowId: state.workflowId, workflowName: state.workflowName
