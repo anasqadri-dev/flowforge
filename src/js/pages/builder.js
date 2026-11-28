@@ -11,6 +11,9 @@ export function renderBuilder() {
         <div class="box-category"><h4>HTTP & API</h4>
           ${item('HTTP Request','globe')}${item('Send Notification','bell')}${item('Write to Log','file-text')}
         </div>
+        <div class="box-category"><h4>Files & CSV</h4>
+          ${item('Read File','file-input')}${item('Create File','file-output')}${item('CSV Parse','file-spreadsheet')}${item('CSV Generate','file-spreadsheet')}${item('Run Sub-workflow','workflow')}
+        </div>
         <div class="box-category"><h4>Data & JSON</h4>
           ${item('Transform Data','sliders-horizontal')}${item('Set Variable','variable')}${item('JSON Parse','braces')}${item('JSON Stringify','code')}${item('Merge Data','combine')}${item('Validate JSON','shield-check')}
         </div>
@@ -26,7 +29,7 @@ export function renderBuilder() {
         <div class="box-category"><h4>Flow Control</h4>
           ${item('Condition','git-branch')}${item('Loop','repeat')}${item('Wait','timer')}
         </div>
-        <p class="box-library-count">28 available boxes</p>
+        <p class="box-library-count">33 available boxes</p>
       </aside>
       <main class="canvas-area">
         <div id="drawflow-container" aria-label="Workflow canvas"></div>
