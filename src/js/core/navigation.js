@@ -1,5 +1,6 @@
 import { renderBuilder } from '../pages/builder.js';
 import { renderRuns, initRuns } from '../pages/runs.js';
+import { renderLogs, initLogs } from '../pages/logs.js';
 import { renderTemplatesPage } from '../pages/templates.js';
 import { renderSettingsPage } from '../pages/settings.js';
 import { initNodes } from '../components/nodes.js';
@@ -126,6 +127,12 @@ export function initializeNavigation(showNotification) {
                     content.innerHTML = renderRuns();
                     requestAnimationFrame(() => {
                         if (requestId === routeRequest) initRuns();
+                    });
+                    break;
+                case '#logs':
+                    content.innerHTML = renderLogs();
+                    requestAnimationFrame(() => {
+                        if (requestId === routeRequest) initLogs();
                     });
                     break;
                 case '#templates':

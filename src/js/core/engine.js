@@ -163,6 +163,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
             const step = {
                 nodeId: node.id, type: node.type, status: 'success',
                 output, duration: Date.now() - started,
+                ...(node.type === 'Write to Log' ? { configuredMessage: String(node.config?.message ?? '') } : {}),
                 ...(iteration !== null ? { iteration } : {})
             };
             steps.push(step);
