@@ -34,7 +34,7 @@ for (const template of BUILT_IN_TEMPLATES) {
 
   for (const node of template.nodes) {
     const text = JSON.stringify(node.config || {});
-    for (const match of text.matchAll(/\\{\\{\\s*(n\\d+)\\./g)) {
+    for (const match of text.matchAll(/\{\{\s*(n\d+)\./g)) {
       if (!nodeIds.has(match[1])) {
         throw new Error(`Template "${template.name}" references missing node ${match[1]}.`);
       }
