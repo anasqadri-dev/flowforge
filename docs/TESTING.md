@@ -5,7 +5,7 @@ Run these checks in a modern desktop browser using the local static server or th
 ## 1. Application shell
 
 - [ ] Open the application and confirm the Dashboard loads without console errors.
-- [ ] Navigate between Dashboard, Builder, Runs, Logs, Templates, and Settings using the sidebar.
+- [ ] Navigate between Dashboard, Builder, Runs, Logs, Templates, Tutorials, and Settings using the sidebar.
 - [ ] Create a new workflow from the Dashboard while another workflow is active; confirm the previous workflow is preserved and the new workflow is empty.
 - [ ] Open an older saved workflow from the Dashboard and confirm its nodes, connections, and settings restore.
 - [ ] Confirm the active navigation item follows the current route.
@@ -17,7 +17,7 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Open Builder and confirm the box library, canvas, workflow toolbar, Run button, and settings panel are visible.
 - [ ] Search for a node type and confirm unrelated node types are filtered out.
 - [ ] Drag each available node type onto the canvas.
-- [ ] Confirm the Box Library has 28 node types grouped into Triggers, HTTP & API, Data & JSON, Arrays & Collections, Text, Math & Utilities, and Flow Control.
+- [ ] Confirm the Box Library has 33 node types grouped into Triggers, HTTP & API, Data & JSON, Arrays & Collections, Text, Math & Utilities, and Flow Control.
 - [ ] Run JSON Parse, JSON Stringify, Merge Data, and Validate JSON with valid and invalid input.
 - [ ] Run Filter Array and Array Length with JSON arrays; verify property matching and empty-array behavior.
 - [ ] Run Format Text, Replace Text, Split Text, and Join Text with normal text and interpolated values.
@@ -176,6 +176,11 @@ Do not mark the project fully verified until all critical checks pass on the dep
 - [ ] Download a complete application backup and inspect that it contains workflows, runs, settings, variables, environments, schedules, and versions but no template payloads.
 - [ ] Restore a valid backup and confirm existing data is replaced only after confirmation and a safety backup is downloaded.
 - [ ] Try malformed JSON, wrong application identifier, unsupported backup version, and oversized backup files; confirm each is rejected without changing stored data.
-- [ ] Launch Demo Mode and confirm it creates a connected three-node sample workflow.
+- [ ] Confirm Showcase and Analytics are not present in the sidebar or route handling.
 - [ ] Complete tutorial checkboxes and confirm progress persists after refresh.
-- [ ] Open Analytics and verify totals and averages match Run History.
+- [ ] Confirm Settings contains Appearance, Workflow Preferences, Data Management, About, Backup & Restore, Global Variables, and Keyboard Shortcuts only.
+- [ ] Confirm Environment Profiles, Local Workflow Scheduler, and Workflow Version History settings sections are absent.
+- [ ] Download a backup, then restore it and confirm templates are excluded and current data is protected by a safety backup.
+- [ ] Replay a previous run after editing or deleting its current saved workflow; confirm the run snapshot is used.
+- [ ] Confirm debugger controls are small, located below the live output, and do not cover step results.
+- [ ] Confirm JSON log messages show readable field labels and values, with formatted raw data available on demand.
