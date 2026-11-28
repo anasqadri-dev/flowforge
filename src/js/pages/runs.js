@@ -106,6 +106,9 @@ function renderRunList(runs) {
             </span>
 
             <div class="run-actions">
+                <button class="btn replay-run" data-run-id="${escapeHTML(run.id)}" type="button">Replay</button>
+                <button class="btn report-csv" data-run-id="${escapeHTML(run.id)}" type="button">CSV</button>
+                <button class="btn report-pdf" data-run-id="${escapeHTML(run.id)}" type="button">PDF</button>
                 <button
                     class="btn view-run"
                     data-run-id="${escapeHTML(run.id)}"
@@ -280,6 +283,15 @@ export function initRuns() {
                 const result = await runWorkflow(workflow.nodes, workflow.connections, {}, { workflowId: workflow.id, workflowName: workflow.name });
                 document.dispatchEvent(new CustomEvent('flowforge:workflow-completed', { detail: result }));
                 await refreshRuns();
+            }
+            if (button.classList.contains('report-csv')) await exportRunReport(button.dataset.runId, 'csv');
+            if (button.classList.contains('report-pdf')) await exportRunReport(button.dataset.runId, 'pdf');
+            if (button.classList.contains('replay-run')) {
+                const previous = await getRun(button.dataset.runId);
+                const workflow = previous?.workflowId ? await getWorkflow(previous.workflowId) : null;
+                if (!workflow) throw new Error('The original saved workflow is no longer available for replay.');
+                const result = await runWorkflow(workflow.nodes, workflow.connections, {}, { workflowId: workflow.id, workflowName: workflow.name });
+                await saveRun(result); document.dispatchEvent(new CustomEvent('flowforge:run-saved', { detail: result })); await refreshRuns();
             }
             if (button.classList.contains('report-csv')) await exportRunReport(button.dataset.runId, 'csv');
             if (button.classList.contains('report-pdf')) await exportRunReport(button.dataset.runId, 'pdf');
