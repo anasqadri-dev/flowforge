@@ -220,6 +220,8 @@ function bindExecutionMonitor() {
     document.addEventListener('flowforge:workflow-started', event => {
         const { steps, summary, status, progress, finalContext } = getExecutionMonitorElements();
         if (!steps) return;
+        document.querySelectorAll('#drawflow-container .execution-active, #drawflow-container .execution-done, #drawflow-container .execution-failed').forEach(node => node.classList.remove('execution-active', 'execution-done', 'execution-failed'));
+        document.querySelectorAll('#drawflow-container .connection').forEach(path => path.classList.remove('execution-flow-active'));
         executionStepCount = event.detail?.totalSteps || 0;
         executionCompletedCount = 0;
         steps.replaceChildren();
@@ -357,7 +359,8 @@ function initializeRunButton() {
             const selectedFile = document.getElementById('workflow-input-file')?.files?.[0];
             const fileContext = selectedFile ? { __selectedFileText: await selectedFile.text(), __selectedFileName: selectedFile.name } : {};
             const result = await runWorkflow(state.nodes, state.connections, fileContext, {
-                workflowId: state.workflowId, workflowName: state.workflowName
+                workflowId: state.workflowId, workflowName: state.workflowName,
+                workflowSnapshot: { nodes: structuredClone(state.nodes), connections: structuredClone(state.connections) }
             });
             activeDebugRunId = null;
             const hasNotificationStep = result.steps.some(step =>
