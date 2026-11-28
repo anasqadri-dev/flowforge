@@ -1,5 +1,5 @@
 import { handlers } from './handlers.js';
-import { getGlobalVariables } from './advanced.js';
+import { getGlobalVariables, getEnvironmentProfiles } from './advanced.js';
 
 const activeExecutions = new Map();
 
@@ -136,8 +136,8 @@ function chooseConditionEdge(edges, result) {
 export async function runWorkflow(nodes, connections, initialContext = {}, metadata = {}) {
     const runId = crypto.randomUUID();
     const startedAt = Date.now();
-    const globalVariables = await getGlobalVariables().catch(() => ({}));
-    const context = { ...globalVariables, ...initialContext };
+    const [globalVariables, environment] = await Promise.all([getGlobalVariables().catch(() => ({})), getEnvironmentProfiles().catch(() => ({ active: 'Development', profiles: {} }))]);
+    const context = { ...globalVariables, ...(environment.profiles?.[environment.active] || {}), ...initialContext };
     const control = { paused: Boolean(metadata.debugPaused), cancelled: false, stepBudget: Infinity, release: null };
     activeExecutions.set(runId, control);
     const steps = [];
@@ -148,6 +148,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
     try {
         graph = validateGraph(nodes, connections);
     } catch (error) {
+        activeExecutions.delete(runId);
         return {
             id: runId, workflowId: metadata.workflowId || null,
             workflowName: metadata.workflowName || 'Untitled Workflow',
