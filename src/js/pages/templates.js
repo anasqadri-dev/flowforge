@@ -1,6 +1,6 @@
 import { state, replaceWorkflowState } from '../core/state.js';
 import { saveSetting, getSetting } from '../core/database.js';
-import { saveCurrentWorkflow } from '../core/persistence.js';
+import { saveCurrentWorkflow, cancelPendingAutoSave, validateWorkflow } from '../core/persistence.js';
 import { showNotification } from '../components/notifications.js';
 import { refreshIcons } from '../core/icons.js';
 
@@ -23,6 +23,25 @@ function makeLinearTemplate({ id, name, description, category, steps }) {
       from: nodes[index].id,
       to: node.id
     }))
+  };
+}
+
+function makeDecisionTemplate({ id, name, description, category, variableName, variableValue, left, operator, right, trueMessage, falseMessage }) {
+  return {
+    id, name, description, category,
+    nodes: [
+      { id: 'n1', type: 'Manual Start', x: 80, y: 180, config: {} },
+      { id: 'n2', type: 'Set Variable', x: 300, y: 180, config: { name: variableName, value: variableValue } },
+      { id: 'n3', type: 'Condition', x: 540, y: 180, config: { left, operator, right } },
+      { id: 'n4', type: 'Write to Log', x: 800, y: 80, config: { message: trueMessage } },
+      { id: 'n5', type: 'Write to Log', x: 800, y: 300, config: { message: falseMessage } }
+    ],
+    connections: [
+      { id: 'c1', from: 'n1', to: 'n2' },
+      { id: 'c2', from: 'n2', to: 'n3' },
+      { id: 'c3', from: 'n3', to: 'n4', branch: 'true', sourceHandle: 'output_1' },
+      { id: 'c4', from: 'n3', to: 'n5', branch: 'false', sourceHandle: 'output_2' }
+    ]
   };
 }
 
@@ -192,25 +211,23 @@ const BUILT_IN_TEMPLATES = [
       { type: 'Write to Log', config: { message: 'Order {{orderId}} moved to {{orderStatus}}.' } }
     ]
   }),
-  makeLinearTemplate({
+  makeDecisionTemplate({
     id: 'support-ticket-triage', name: 'Support Ticket Triage',
-    description: 'Capture a sample support ticket, evaluate its priority, and route the result to a matching log branch.',
+    description: 'Evaluate a ticket priority and route high-priority and standard tickets to separate actions.',
     category: 'Customer Operations',
-    steps: [
-      { type: 'Set Variable', config: { name: 'ticketPriority', value: 'high' } },
-      { type: 'Condition', config: { left: '{{ticketPriority}}', operator: '==', right: 'high' } },
-      { type: 'Write to Log', config: { message: 'High-priority ticket: assign for urgent review.' } }
-    ]
+    variableName: 'ticketPriority', variableValue: 'high',
+    left: '{{ticketPriority}}', operator: '==', right: 'high',
+    trueMessage: 'High-priority ticket: assign for urgent review.',
+    falseMessage: 'Standard-priority ticket: add to the normal support queue.'
   }),
-  makeLinearTemplate({
+  makeDecisionTemplate({
     id: 'data-validation', name: 'Required Field Validation',
-    description: 'Check whether a required customer email value is present and log a clear validation result.',
+    description: 'Check whether a required customer email value is present and report valid or missing data.',
     category: 'Data Quality',
-    steps: [
-      { type: 'Set Variable', config: { name: 'customerEmail', value: 'customer@example.com' } },
-      { type: 'Condition', config: { left: '{{customerEmail}}', operator: '!=', right: '' } },
-      { type: 'Write to Log', config: { message: 'Required email field is present.' } }
-    ]
+    variableName: 'customerEmail', variableValue: 'customer@example.com',
+    left: '{{customerEmail}}', operator: '!=', right: '',
+    trueMessage: 'Validation passed: required email field is present.',
+    falseMessage: 'Validation failed: customer email is missing.'
   }),
   makeLinearTemplate({
     id: 'delayed-follow-up', name: 'Delayed Follow-up Reminder',
@@ -322,37 +339,74 @@ export async function renderTemplatesPage(container, isCurrent = () => true) {
 
   container.querySelectorAll('.use-template').forEach(button => {
     button.addEventListener('click', async () => {
-      const template = templates.find(
-        item => item.id === button.dataset.templateId
-      );
-
+      if (button.disabled) return;
+      const template = templates.find(item => item.id === button.dataset.templateId);
       if (!template) return;
 
-      state.workflowId = null;
-      state.workflowName = template.name;
-      state.createdAt = Date.now();
+      button.disabled = true;
+      try {
+        validateWorkflow(template, { requireStart: true, strictConnections: true });
 
-      replaceWorkflowState({
-        nodes: structuredClone(template.nodes),
-        connections: structuredClone(template.connections)
-      });
+        const reachable = new Set();
+        const adjacency = new Map(template.nodes.map(node => [node.id, []]));
+        template.connections.forEach(edge => adjacency.get(edge.from).push(edge.to));
+        const startNode = template.nodes.find(node => ['Manual Start', 'Timer (Schedule)'].includes(node.type));
+        const pending = [startNode.id];
+        while (pending.length) {
+          const id = pending.pop();
+          if (reachable.has(id)) continue;
+          reachable.add(id);
+          pending.push(...adjacency.get(id));
+        }
+        if (reachable.size !== template.nodes.length) {
+          throw new Error('This template contains nodes that are disconnected from its start node.');
+        }
 
-      document.dispatchEvent(
-        new CustomEvent('flowforge:workflow-loaded', {
+        cancelPendingAutoSave();
+        if (state.workflowId || state.nodes.length || state.connections.length) {
+          const savedCurrent = await saveCurrentWorkflow(false);
+          if (!savedCurrent) throw new Error('Your current workflow could not be saved. The template was not loaded.');
+        }
+
+        const idMap = new Map(template.nodes.map(node => [node.id, crypto.randomUUID()]));
+        const nodes = template.nodes.map(node => ({
+          ...structuredClone(node),
+          id: idMap.get(node.id),
+          x: Number(node.x) || 0,
+          y: Number(node.y) || 0
+        }));
+        const connections = template.connections.map(edge => ({
+          ...structuredClone(edge),
+          id: crypto.randomUUID(),
+          from: idMap.get(edge.from),
+          to: idMap.get(edge.to)
+        }));
+
+        state.workflowId = crypto.randomUUID();
+        state.workflowName = template.name;
+        state.createdAt = Date.now();
+        replaceWorkflowState({ nodes, connections });
+
+        const savedTemplateWorkflow = await saveCurrentWorkflow(false);
+        if (!savedTemplateWorkflow) {
+          throw new Error('The template was loaded in memory but could not be saved to IndexedDB.');
+        }
+
+        document.dispatchEvent(new CustomEvent('flowforge:workflow-loaded', {
           detail: {
-            workflowId: null,
-            workflowName: state.workflowName
+            workflowId: savedTemplateWorkflow.id,
+            workflowName: savedTemplateWorkflow.name
           }
-        })
-      );
+        }));
 
-      await saveCurrentWorkflow();
-
-      showNotification(
-        `${template.name} loaded successfully!`
-      );
-
-      window.location.hash = '#builder';
+        showNotification(`${template.name} loaded successfully!`);
+        window.location.hash = '#builder';
+      } catch (error) {
+        console.error('Template could not be loaded:', error);
+        showNotification(error.message || 'Unable to load this template.');
+      } finally {
+        button.disabled = false;
+      }
     });
   });
 
