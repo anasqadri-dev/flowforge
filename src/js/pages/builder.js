@@ -40,9 +40,9 @@ export function renderBuilder() {
         <button type="button" id="run-workflow" class="btn-primary run-workflow-btn"><i data-lucide="play" aria-hidden="true"></i> Run Workflow</button>
         <section id="execution-monitor" class="execution-monitor" aria-live="polite" aria-label="Live workflow execution">
           <div class="execution-monitor-heading"><div><h3>Live Execution</h3><p id="execution-summary">Run your workflow to watch each step and its output here.</p></div><span id="execution-status" class="run-status idle">IDLE</span></div>
-          <div class="execution-progress"><span id="execution-progress-bar"></span></div>
+          <div class="debugger-controls"><button type="button" id="debug-pause" class="btn" disabled>Pause</button><button type="button" id="debug-step" class="btn" disabled>Step</button><button type="button" id="debug-resume" class="btn" disabled>Resume</button><button type="button" id="debug-cancel" class="danger-button" disabled>Cancel</button></div><div class="execution-progress"><span id="execution-progress-bar"></span></div>
           <ol id="execution-steps" class="execution-steps"><li class="execution-empty">No execution yet. Press Run Workflow to begin.</li></ol>
-          <details class="execution-context"><summary>Final workflow data</summary><pre id="execution-final-context">No data yet.</pre></details>
+          <details class="execution-context"><summary>Live variables</summary><pre id="execution-live-variables">Variables will appear as the workflow runs.</pre></details><details class="execution-context"><summary>Final workflow data</summary><pre id="execution-final-context">No data yet.</pre></details>
         </section>
       </main>
       <div id="settings-container" style="display: none;"></div>
