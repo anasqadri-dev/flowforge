@@ -1988,7 +1988,7 @@ button, input, select, textarea { font-size: inherit; }
 .log-message.log-friendly-message .log-friendly-field:nth-child(n + 3) {
     grid-column: 1 / -1;
 }
-.log-message.log-message.log-friendly-message .log-friendly-field {
+.log-message.log-friendly-message .log-friendly-field {
     display: flex;
     align-self: start;
     flex-direction: column;
