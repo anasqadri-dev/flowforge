@@ -31,38 +31,50 @@ export async function renderSettingsPage(container, isCurrent = () => true) {
             <div class="page-heading">
                 <div><h1>Application Settings</h1><p>Manage your FlowForge preferences and application data.</p></div>
             </div>
-            <div class="settings-card">
-                <h2>Appearance</h2>
-                <div class="settings-row">
-                    <div><strong>Application Theme</strong><p>Choose your preferred interface appearance.</p></div>
-                    <select id="app-theme" aria-label="Application theme">
-                        <option value="light" ${savedTheme === 'light' ? 'selected' : ''}>Light</option>
-                        <option value="dark" ${savedTheme === 'dark' ? 'selected' : ''}>Dark</option>
-                    </select>
-                </div>
-            </div>
-            <div class="settings-card">
-                <h2>Workflow Preferences</h2>
-                <div class="settings-row">
-                    <div><strong>Confirm Before Deleting</strong><p>Ask before deleting saved data and templates.</p></div>
-                    <input type="checkbox" id="confirm-delete" ${preferences.confirmDelete !== false ? 'checked' : ''}>
-                </div>
-                <div class="settings-row">
-                    <div><strong>Default Workflow Name</strong><p>Name used when creating a new workflow.</p></div>
-                    <input type="text" id="default-workflow-name" maxlength="100" value="${escapeHTML(preferences.defaultWorkflowName || 'Untitled Workflow')}">
-                </div>
-                <button id="save-preferences" class="btn-primary" type="button">Save Preferences</button>
-            </div>
-            <div class="settings-card danger-zone">
-                <h2>Data Management</h2>
-                <p>Permanently remove saved workflows, execution history, and custom templates from this browser.</p>
-                <button id="clear-application-data" class="danger-button" type="button">Clear Application Data</button>
-            </div>
-            <div class="settings-card">
-                <h2>About FlowForge</h2>
-                <p>FlowForge — Visual Workflow Automation Platform.</p>
-                <p>Developed as a Web Engineering Theory final project.</p>
-                <p>Version 1.0</p>
+            <div class="settings-core-grid">
+                <section class="settings-card settings-appearance-card">
+                    <div class="settings-card-heading">
+                        <div><h2>Appearance</h2><p>Choose the look that feels most comfortable.</p></div>
+                        <i data-lucide="palette" aria-hidden="true"></i>
+                    </div>
+                    <div class="settings-row">
+                        <div><strong>Application theme</strong><p>Switch between Light and Dark appearance.</p></div>
+                        <select id="app-theme" aria-label="Application theme">
+                            <option value="light" ${savedTheme === 'light' ? 'selected' : ''}>Light</option>
+                            <option value="dark" ${savedTheme === 'dark' ? 'selected' : ''}>Dark</option>
+                        </select>
+                    </div>
+                </section>
+                <section class="settings-card settings-preferences-card">
+                    <div class="settings-card-heading">
+                        <div><h2>Workflow Preferences</h2><p>Set sensible defaults for your workflows.</p></div>
+                        <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+                    </div>
+                    <div class="settings-row">
+                        <div><strong>Confirm before deleting</strong><p>Ask before deleting saved data and templates.</p></div>
+                        <input type="checkbox" id="confirm-delete" ${preferences.confirmDelete !== false ? 'checked' : ''}>
+                    </div>
+                    <div class="settings-row">
+                        <div><strong>Default workflow name</strong><p>Name used when creating a new workflow.</p></div>
+                        <input type="text" id="default-workflow-name" maxlength="100" value="${escapeHTML(preferences.defaultWorkflowName || 'Untitled Workflow')}">
+                    </div>
+                    <button id="save-preferences" class="btn-primary" type="button"><i data-lucide="check" aria-hidden="true"></i> Save Preferences</button>
+                </section>
+                <section class="settings-card danger-zone settings-card-wide">
+                    <div class="settings-card-heading">
+                        <div><h2>Data Management</h2><p>Remove saved information from this browser when you no longer need it.</p></div>
+                        <i data-lucide="database" aria-hidden="true"></i>
+                    </div>
+                    <p>Permanently removes saved workflows, execution history, and custom templates. This action cannot be undone.</p>
+                    <button id="clear-application-data" class="danger-button" type="button"><i data-lucide="trash-2" aria-hidden="true"></i> Clear Application Data</button>
+                </section>
+                <section class="settings-card settings-about-card settings-card-wide">
+                    <div class="settings-card-heading">
+                        <div><h2>About FlowForge</h2><p>Your browser-based visual workflow automation workspace.</p></div>
+                        <i data-lucide="workflow" aria-hidden="true"></i>
+                    </div>
+                    <div class="settings-about-meta"><span>FlowForge — Visual Workflow Automation Platform</span><span>Web Engineering Theory project</span><span>Version 1.0</span></div>
+                </section>
             </div>
         </section>
     `;
