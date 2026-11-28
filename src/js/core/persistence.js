@@ -9,6 +9,7 @@ import { state, replaceWorkflowState } from './state.js';
 let saveTimer = null;
 let notificationCallback = null;
 let restorePromise = Promise.resolve();
+let isRestoring = false;
 
 function readActiveWorkflowId() {
     try { return localStorage.getItem('flowforge-active-workflow'); }
@@ -59,6 +60,7 @@ export async function saveCurrentWorkflow(showMessage = true) {
 }
 
 function scheduleAutoSave() {
+    if (isRestoring) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveCurrentWorkflow(false), 700);
 }
@@ -86,6 +88,7 @@ export async function loadWorkflowById(id) {
 }
 
 async function restoreLatestWorkflow() {
+    isRestoring = true;
     try {
         const workflows = await getWorkflows();
         const activeId = readActiveWorkflowId();
@@ -101,6 +104,8 @@ async function restoreLatestWorkflow() {
     } catch (error) {
         console.error('Unable to restore workflow:', error);
         replaceWorkflowState({ nodes: [], connections: [] });
+    } finally {
+        isRestoring = false;
     }
 }
 
