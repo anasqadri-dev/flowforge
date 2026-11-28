@@ -12,7 +12,12 @@ import { state, replaceWorkflowState } from '../core/state.js';
 import { cancelPendingAutoSave } from '../core/persistence.js';
 
 export async function renderSettingsPage(container, isCurrent = () => true) {
-    const savedTheme = await getSetting('theme') || localStorage.getItem('theme') || 'light';
+    const databaseTheme = await getSetting('theme');
+    let savedTheme = databaseTheme || 'light';
+    if (!databaseTheme) {
+        try { savedTheme = localStorage.getItem('theme') || 'light'; }
+        catch (error) { console.warn('Local theme preference is unavailable.', error); }
+    }
     const preferences = await getSetting('preferences') || {
         confirmDelete: true,
         defaultWorkflowName: 'Untitled Workflow'
