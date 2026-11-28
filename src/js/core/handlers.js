@@ -151,6 +151,140 @@ export const handlers = {
         return { message, delivered: true, inAppDelivered: true, browserNotificationDelivered };
     },
 
+
+    'JSON Parse': async (config, context) => {
+        const raw = interpolate(config.input || '', context);
+        try { return { data: JSON.parse(raw) }; }
+        catch { throw new Error('JSON Parse: input is not valid JSON.'); }
+    },
+
+    'JSON Stringify': async (config, context) => {
+        const raw = interpolate(config.input || '', context);
+        let value;
+        try { value = JSON.parse(raw); }
+        catch { value = raw; }
+        return { json: JSON.stringify(value, null, 2) };
+    },
+
+    'Validate JSON': async (config, context) => {
+        const raw = interpolate(config.input || '', context);
+        try { const data = JSON.parse(raw); return { valid: true, data }; }
+        catch (error) { return { valid: false, error: error.message }; }
+    },
+
+    'Filter Array': async (config, context) => {
+        let items;
+        try { items = JSON.parse(interpolate(config.input || '[]', context)); }
+        catch { throw new Error('Filter Array: input must be a valid JSON array.'); }
+        if (!Array.isArray(items)) throw new Error('Filter Array: input must be an array.');
+        const expected = interpolate(config.value ?? '', context);
+        const actual = item => String(resolvePath({ item }, 'item.' + (config.path || '')) ?? '');
+        const filtered = items.filter(item => {
+            const value = actual(item);
+            switch (config.operator || '==') {
+                case '==': return value === expected;
+                case '!=': return value !== expected;
+                case 'contains': return value.includes(expected);
+                case '>': return Number(value) > Number(expected);
+                case '<': return Number(value) < Number(expected);
+                default: throw new Error('Filter Array: unsupported comparison.');
+            }
+        });
+        return { items: filtered, count: filtered.length };
+    },
+
+    'Array Length': async (config, context) => {
+        let items;
+        try { items = JSON.parse(interpolate(config.input || '[]', context)); }
+        catch { throw new Error('Array Length: input must be valid JSON.'); }
+        if (!Array.isArray(items)) throw new Error('Array Length: input must be an array.');
+        return { length: items.length };
+    },
+
+    'Merge Data': async (config, context) => {
+        let first, second;
+        try {
+            first = JSON.parse(interpolate(config.input || '{}', context));
+            second = JSON.parse(interpolate(config.second || '{}', context));
+        } catch { throw new Error('Merge Data: both inputs must be valid JSON.'); }
+        if (!first || Array.isArray(first) || typeof first !== 'object'
+            || !second || Array.isArray(second) || typeof second !== 'object') {
+            throw new Error('Merge Data: both inputs must be JSON objects.');
+        }
+        return { data: { ...first, ...second } };
+    },
+
+    'Format Text': async (config, context) => ({ text: interpolate(config.template || '', context) }),
+
+    'Replace Text': async (config, context) => {
+        const input = interpolate(config.input || '', context);
+        const search = interpolate(config.search || '', context);
+        if (!search) throw new Error('Replace Text: search text cannot be empty.');
+        return { text: input.split(search).join(interpolate(config.replacement || '', context)) };
+    },
+
+    'Split Text': async (config, context) => {
+        const delimiter = interpolate(config.delimiter ?? ',', context);
+        if (!delimiter) throw new Error('Split Text: delimiter cannot be empty.');
+        const parts = interpolate(config.input || '', context).split(delimiter);
+        return { items: parts, count: parts.length };
+    },
+
+    'Join Text': async (config, context) => {
+        let items;
+        try { items = JSON.parse(interpolate(config.input || '[]', context)); }
+        catch { throw new Error('Join Text: input must be a JSON array.'); }
+        if (!Array.isArray(items)) throw new Error('Join Text: input must be an array.');
+        return { text: items.join(interpolate(config.delimiter ?? ',', context)) };
+    },
+
+    'Math Operation': async (config, context) => {
+        const left = Number(interpolate(String(config.left ?? ''), context));
+        const right = Number(interpolate(String(config.right ?? ''), context));
+        if (!Number.isFinite(left) || !Number.isFinite(right)) throw new Error('Math Operation: both operands must be valid numbers.');
+        let result;
+        switch (config.operation || '+') {
+            case '+': result = left + right; break;
+            case '-': result = left - right; break;
+            case '*': result = left * right; break;
+            case '/': if (right === 0) throw new Error('Cannot divide by zero.'); result = left / right; break;
+            case '%': if (right === 0) throw new Error('Cannot divide by zero.'); result = left % right; break;
+            case '**': result = left ** right; break;
+            default: throw new Error('Math Operation: unsupported operation.');
+        }
+        if (!Number.isFinite(result)) throw new Error('Math Operation produced a non-finite result.');
+        return { result };
+    },
+
+    'Random Number': async (config, context) => {
+        const min = Number(interpolate(String(config.min ?? 1), context));
+        const max = Number(interpolate(String(config.max ?? 100), context));
+        if (!Number.isInteger(min) || !Number.isInteger(max) || max < min) {
+            throw new Error('Random Number: enter whole numbers with maximum greater than or equal to minimum.');
+        }
+        return { value: Math.floor(Math.random() * (max - min + 1)) + min };
+    },
+
+    'Generate UUID': async () => ({ uuid: crypto.randomUUID() }),
+    'Current Date & Time': async () => {
+        const now = new Date();
+        return { iso: now.toISOString(), timestamp: now.getTime(), date: now.toLocaleDateString(), time: now.toLocaleTimeString() };
+    },
+
+    'URL Encode': async (config, context) => ({ value: encodeURIComponent(interpolate(config.input || '', context)) }),
+    'URL Decode': async (config, context) => {
+        try { return { value: decodeURIComponent(interpolate(config.input || '', context)) }; }
+        catch { throw new Error('URL Decode: input contains invalid encoded data.'); }
+    },
+    'Base64 Encode': async (config, context) => {
+        const value = interpolate(config.input || '', context);
+        return { value: btoa(unescape(encodeURIComponent(value))) };
+    },
+    'Base64 Decode': async (config, context) => {
+        try { return { value: decodeURIComponent(escape(atob(interpolate(config.input || '', context)))) }; }
+        catch { throw new Error('Base64 Decode: input is not valid Base64 text.'); }
+    },
+
     'Write to Log': async (config, context) => {
         const message = interpolate(config.message || '', context);
         console.log('[FlowForge]', message);
