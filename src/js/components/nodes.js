@@ -1,6 +1,6 @@
 import { renderSettingsPanel } from './settings-panel.js';
 import { state, addNode, updateNodeConfig, moveNode, deleteNode, addConnection, deleteConnection, undo, redo } from '../core/state.js';
-import { runWorkflow } from '../core/engine.js';
+import { runWorkflow, pauseWorkflow, resumeWorkflow, stepWorkflow, cancelWorkflow } from '../core/engine.js';
 import { refreshIcons } from '../core/icons.js';
 import { showNotification } from './notifications.js';
 import { getSetting } from '../core/database.js';
@@ -74,9 +74,10 @@ function openSettings(drawflowId) {
             'data-input':'input','data-path':'path','data-operator':'operator','data-value':'value','data-second':'second',
             'text-template':'template','text-input':'input','text-search':'search','text-replacement':'replacement','text-delimiter':'delimiter',
             'math-left':'left','math-operation':'operation','math-right':'right',
-            'random-min':'min','random-max':'max','utility-input':'input'
+            'random-min':'min','random-max':'max','utility-input':'input','retry-count':'retryCount','on-error-node-id':'onErrorNodeId','file-name':'filename','file-mime':'mimeType','file-content':'content','sub-workflow-id':'workflowId'
         };
         Object.entries(mappings).forEach(([from,to]) => { if (from in values) { values[to] = values[from]; delete values[from]; } });
+        if ('retryCount' in values) { const count = Number(values.retryCount); if (!Number.isInteger(count) || count < 0 || count > 5) return showNotification('Retry count must be between 0 and 5.'); values.retryCount = count; }
         const configNext = { ...config, ...values };
         syncingFromEditor = true;
         updateNodeConfig(appId, configNext);
@@ -195,6 +196,7 @@ function setupDrawflowEvents(editor) {
 let executionStepCount = 0;
 let executionCompletedCount = 0;
 let executionListenersBound = false;
+let activeDebugRunId = null;
 
 function getExecutionMonitorElements() {
     return {
@@ -202,7 +204,8 @@ function getExecutionMonitorElements() {
         summary: document.getElementById('execution-summary'),
         status: document.getElementById('execution-status'),
         progress: document.getElementById('execution-progress-bar'),
-        finalContext: document.getElementById('execution-final-context')
+        finalContext: document.getElementById('execution-final-context'),
+        liveVariables: document.getElementById('execution-live-variables')
     };
 }
 
@@ -217,6 +220,8 @@ function bindExecutionMonitor() {
     document.addEventListener('flowforge:workflow-started', event => {
         const { steps, summary, status, progress, finalContext } = getExecutionMonitorElements();
         if (!steps) return;
+        document.querySelectorAll('#drawflow-container .execution-active, #drawflow-container .execution-done, #drawflow-container .execution-failed').forEach(node => node.classList.remove('execution-active', 'execution-done', 'execution-failed'));
+        document.querySelectorAll('#drawflow-container .connection').forEach(path => path.classList.remove('execution-flow-active'));
         executionStepCount = event.detail?.totalSteps || 0;
         executionCompletedCount = 0;
         steps.replaceChildren();
@@ -231,6 +236,7 @@ function bindExecutionMonitor() {
         const { steps, summary } = getExecutionMonitorElements();
         if (!steps) return;
         const detail = event.detail || {};
+        activeDebugRunId = detail.runId || activeDebugRunId;
         const item = document.createElement('li');
         item.className = 'execution-step running';
         item.dataset.nodeId = detail.nodeId || '';
@@ -248,6 +254,8 @@ function bindExecutionMonitor() {
         item.append(heading, output);
         steps.append(item);
         summary.textContent = 'Currently running: ' + (detail.type || 'workflow step');
+        const live = document.getElementById('execution-live-variables');
+        if (live) live.textContent = 'Node: ' + detail.nodeId + '\\nType: ' + detail.type;
         item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
@@ -267,6 +275,12 @@ function bindExecutionMonitor() {
         output.textContent = detail.status === 'error'
             ? (detail.error || 'This step failed.')
             : JSON.stringify(detail.output ?? {}, null, 2);
+        if (['Create File', 'CSV Generate'].includes(detail.type) && detail.status === 'success' && detail.output?.readyToDownload) {
+            const download = document.createElement('button'); download.type = 'button'; download.className = 'btn'; download.textContent = 'Download ' + detail.output.filename;
+            download.addEventListener('click', () => { const blob = new Blob([detail.output.content], { type: detail.output.mimeType }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = detail.output.filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }); item.append(download);
+        }
+        const live = document.getElementById('execution-live-variables');
+        if (live) live.textContent = JSON.stringify(detail.context || detail.output || {}, null, 2);
         executionCompletedCount++;
         const percent = executionStepCount
             ? Math.min(100, executionCompletedCount / executionStepCount * 100)
@@ -275,14 +289,31 @@ function bindExecutionMonitor() {
         summary.textContent = executionCompletedCount + ' of ' + executionStepCount + ' steps completed';
     });
 
+    document.addEventListener('flowforge:debug-paused', () => {
+        const summary = document.getElementById('execution-summary');
+        if (summary) summary.textContent = 'Debugger paused. Inspect the current step, then Resume or Step.';
+        const pause = document.getElementById('debug-pause'); if (pause) pause.disabled = true;
+        const step = document.getElementById('debug-step'); if (step) step.disabled = false;
+        const resume = document.getElementById('debug-resume'); if (resume) resume.disabled = false;
+    });
+    document.addEventListener('flowforge:debug-resumed', () => {
+        const summary = document.getElementById('execution-summary'); if (summary) summary.textContent = 'Execution resumed.';
+        const pause = document.getElementById('debug-pause'); if (pause) pause.disabled = false;
+        const step = document.getElementById('debug-step'); if (step) step.disabled = true;
+        const resume = document.getElementById('debug-resume'); if (resume) resume.disabled = true;
+    });
     document.addEventListener('flowforge:workflow-completed', event => {
         const { steps, summary, status, progress, finalContext } = getExecutionMonitorElements();
         if (!steps) return;
         const result = event.detail || {};
+        activeDebugRunId = result.id || activeDebugRunId;
+        document.querySelectorAll('.debugger-controls button').forEach(button => { button.disabled = true; });
+        document.querySelectorAll('#drawflow-container .connection').forEach(path => path.classList.remove('execution-flow-active'));
         const succeeded = result.status === 'success';
-        status.textContent = succeeded ? 'SUCCESS' : 'FAILED';
-        status.className = 'run-status ' + (succeeded ? 'success' : 'error');
-        summary.textContent = (succeeded ? 'Workflow completed' : 'Workflow stopped: ' + (result.error || 'Unknown error'))
+        const cancelled = result.status === 'cancelled';
+        status.textContent = succeeded ? 'SUCCESS' : cancelled ? 'CANCELLED' : 'FAILED';
+        status.className = 'run-status ' + (succeeded ? 'success' : cancelled ? 'idle' : 'error');
+        summary.textContent = (succeeded ? 'Workflow completed' : cancelled ? 'Workflow cancelled' : 'Workflow stopped: ' + (result.error || 'Unknown error'))
             + ' · ' + (result.duration ?? 0) + ' ms';
         progress.style.width = '100%';
         finalContext.textContent = JSON.stringify(result.finalContext || {}, null, 2);
@@ -298,9 +329,16 @@ function bindExecutionMonitor() {
 function initializeRunButton() {
     const button = document.getElementById('run-workflow');
     if (!button) return;
+    document.getElementById('debug-pause')?.addEventListener('click', () => pauseWorkflow(activeDebugRunId));
+    document.getElementById('debug-step')?.addEventListener('click', () => stepWorkflow(activeDebugRunId));
+    document.getElementById('debug-resume')?.addEventListener('click', () => resumeWorkflow(activeDebugRunId));
+    document.getElementById('debug-cancel')?.addEventListener('click', () => cancelWorkflow(activeDebugRunId));
     button.addEventListener('click', async () => {
         if (button.disabled) return;
         button.disabled = true;
+        document.querySelectorAll('.debugger-controls button').forEach(control => { control.disabled = false; });
+        const stepControl = document.getElementById('debug-step'); if (stepControl) stepControl.disabled = true;
+        const resumeControl = document.getElementById('debug-resume'); if (resumeControl) resumeControl.disabled = true;
         button.innerHTML = '<i data-lucide="loader-circle" aria-hidden="true"></i> Running...';
         refreshIcons(button);
         try {
@@ -318,9 +356,13 @@ function initializeRunButton() {
 
             await saveCurrentWorkflow(false);
             document.dispatchEvent(new CustomEvent('flowforge:workflow-started', { detail: { totalSteps: state.nodes.length } }));
-            const result = await runWorkflow(state.nodes, state.connections, {}, {
-                workflowId: state.workflowId, workflowName: state.workflowName
+            const selectedFile = document.getElementById('workflow-input-file')?.files?.[0];
+            const fileContext = selectedFile ? { __selectedFileText: await selectedFile.text(), __selectedFileName: selectedFile.name } : {};
+            const result = await runWorkflow(state.nodes, state.connections, fileContext, {
+                workflowId: state.workflowId, workflowName: state.workflowName,
+                workflowSnapshot: { nodes: structuredClone(state.nodes), connections: structuredClone(state.connections) }
             });
+            activeDebugRunId = null;
             const hasNotificationStep = result.steps.some(step =>
                 step.type === 'Send Notification' && step.status === 'success'
             );
@@ -329,7 +371,7 @@ function initializeRunButton() {
             if (result.status !== 'success' || !hasNotificationStep) {
                 showNotification(result.status === 'success'
                     ? 'Workflow completed successfully in ' + result.duration + ' ms.'
-                    : 'Workflow failed: ' + result.error, 4000);
+                    : result.status === 'cancelled' ? 'Workflow execution cancelled.' : 'Workflow failed: ' + result.error, 4000);
             }
             if (result.status === 'error' && result.steps.length && state.workflowId === result.workflowId) {
                 const failed = result.steps.find(step => step.status === 'error');
@@ -368,6 +410,9 @@ function initializeKeyboardShortcuts() {
         const editor = getDrawflowEditor();
         if (!editor) return;
         const modifier = event.ctrlKey || event.metaKey;
+        if (modifier && event.key.toLowerCase() === 's') { event.preventDefault(); document.getElementById('save-workflow')?.click(); return; }
+        if (modifier && event.key === 'Enter') { event.preventDefault(); document.getElementById('run-workflow')?.click(); return; }
+        if (modifier && event.shiftKey && event.key.toLowerCase() === 'd') { event.preventDefault(); if (document.getElementById('debug-pause')?.disabled) resumeWorkflow(activeDebugRunId); else pauseWorkflow(activeDebugRunId); return; }
         if (modifier && event.key.toLowerCase() === 'z') {
             event.preventDefault();
             if (event.shiftKey) redo(); else undo();

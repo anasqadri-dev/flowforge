@@ -33,7 +33,7 @@ The application runs entirely in the browser. It does not require a backend serv
 ## Features
 
 - Visual workflow builder with drag-and-drop nodes, connections, zoom, and pan.
-- 28 built-in workflow boxes across triggers, HTTP/API, data/JSON, arrays, text, math/utilities, and flow control.
+- 33 built-in workflow boxes across triggers, HTTP/API, data/JSON, arrays, text, math/utilities, and flow control.
 - Dynamic configuration forms and executable handlers for JSON parsing/validation, array filtering, text processing, math, date/time, UUID, URL, and Base64 operations.
 - Live in-app execution monitor showing each step as it starts and finishes, with readable outputs, errors, progress, and final workflow data.
 - In-app notification delivery after workflow completion; native browser notifications are an optional enhancement.
@@ -46,12 +46,19 @@ The application runs entirely in the browser. It does not require a backend serv
 - JSON workflow import and export.
 - 16 built-in, practical workflow templates and user-created templates.
 - Light and dark themes.
+- Step debugger with pause, resume, single-step execution, cancellation, live variable inspection, and animated node/connection feedback.
+- Configurable retry attempts and recovery-node routing for failed actions.
+- Reusable global variables.
+- CSV parsing/generation, browser-selected file input, generated file downloads, and reusable sub-workflows.
+- Workflow duplication and saved execution replay using the exact workflow snapshot from the selected run.
+- Application backup/restore for workflows, run history, settings and variables (templates are excluded).
+- One-click Demo Mode, interactive tutorials, and CSV/printable PDF execution reports.
 - Responsive application layout.
 - Text-only FlowForge sidebar wordmark and a custom SVG browser favicon.
 
 ## Box library
 
-The Builder includes 28 draggable box types: Manual Start, Timer (Schedule), HTTP Request, Transform Data, Set Variable, Wait, Condition, Loop, Send Notification, Write to Log, JSON Parse, JSON Stringify, Merge Data, Validate JSON, Filter Array, Array Length, Format Text, Replace Text, Split Text, Join Text, Math Operation, Random Number, Generate UUID, Current Date & Time, URL Encode, URL Decode, Base64 Encode, and Base64 Decode.
+The Builder includes 33 draggable box types: Manual Start, Timer (Schedule), HTTP Request, Transform Data, Set Variable, Wait, Condition, Loop, Send Notification, Write to Log, JSON Parse, JSON Stringify, Merge Data, Validate JSON, Filter Array, Array Length, Format Text, Replace Text, Split Text, Join Text, Math Operation, Random Number, Generate UUID, Current Date & Time, URL Encode, URL Decode, Base64 Encode, Base64 Decode, Read File, Create File, CSV Parse, CSV Generate, and Run Sub-workflow.
 
 All new actions have matching settings forms and execution handlers. JSON inputs are parsed and validated, array operations require JSON arrays, math rejects invalid operands and division by zero, and Base64 helpers support Unicode text.
 
@@ -117,6 +124,8 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 │       │   ├── settings-panel.js
 │       │   └── sidebar.js
 │       ├── core/
+│       │   ├── advanced.js
+│       │   ├── backup.js
 │       │   ├── database.js
 │       │   ├── engine.js
 │       │   ├── handlers.js
@@ -128,6 +137,7 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 │       └── pages/
 │           ├── builder.js
 │           ├── logs.js
+│           ├── tutorials.js
 │           ├── runs.js
 │           ├── settings.js
 │           └── templates.js
@@ -195,3 +205,14 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 **FlowForge — A Web Engineering Final Project**
 
 Developed at Sukkur IBA University, Department of Computer Science.
+
+
+## Interface and data management
+
+The sidebar focuses on Dashboard, Builder, Runs, Logs, Templates, Tutorials, and Settings. Showcase and Analytics are not part of the application navigation.
+
+Settings are intentionally focused on appearance, workflow preferences, backup and restore, reusable global variables, keyboard shortcuts, and application information. Environment profiles, local scheduling, and workflow version-history controls are not exposed in Settings.
+
+Execution controls are compact and placed below the live step output so they do not cover workflow results. Run History replay uses the workflow snapshot saved with that run, so replay remains available even if the currently saved workflow has since changed or been deleted.
+
+The Logs page presents structured JSON as readable fields first, with an optional formatted-data view for users who want the full details.

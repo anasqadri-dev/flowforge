@@ -1,4 +1,13 @@
 import { handlers } from './handlers.js';
+import { getGlobalVariables, getEnvironmentProfiles } from './advanced.js';
+
+const activeExecutions = new Map();
+
+export function pauseWorkflow(runId) { const control = activeExecutions.get(runId); if (control) { control.paused = true; publishExecutionEvent('flowforge:debug-paused', { runId }); return true; } return false; }
+export function resumeWorkflow(runId) { const control = activeExecutions.get(runId); if (!control) return false; control.paused = false; control.stepBudget = Infinity; control.release?.(); control.release = null; publishExecutionEvent('flowforge:debug-resumed', { runId }); return true; }
+export function stepWorkflow(runId) { const control = activeExecutions.get(runId); if (!control) return false; control.stepBudget = 1; control.paused = false; control.release?.(); control.release = null; publishExecutionEvent('flowforge:debug-step', { runId }); return true; }
+export function cancelWorkflow(runId) { const control = activeExecutions.get(runId); if (!control) return false; control.cancelled = true; control.paused = false; control.release?.(); control.release = null; publishExecutionEvent('flowforge:debug-cancelled', { runId }); return true; }
+
 
 function publishExecutionEvent(name, detail) {
     if (typeof document !== 'undefined') {
@@ -127,7 +136,10 @@ function chooseConditionEdge(edges, result) {
 export async function runWorkflow(nodes, connections, initialContext = {}, metadata = {}) {
     const runId = crypto.randomUUID();
     const startedAt = Date.now();
-    const context = { ...initialContext };
+    const [globalVariables, environment] = await Promise.all([getGlobalVariables().catch(() => ({})), getEnvironmentProfiles().catch(() => ({ active: 'Development', profiles: {} }))]);
+    const context = { ...globalVariables, ...(environment.profiles?.[environment.active] || {}), ...initialContext };
+    const control = { paused: Boolean(metadata.debugPaused), cancelled: false, stepBudget: Infinity, release: null };
+    activeExecutions.set(runId, control);
     const steps = [];
     let status = 'success';
     let errorMessage = null;
@@ -136,9 +148,11 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
     try {
         graph = validateGraph(nodes, connections);
     } catch (error) {
+        activeExecutions.delete(runId);
         return {
             id: runId, workflowId: metadata.workflowId || null,
             workflowName: metadata.workflowName || 'Untitled Workflow',
+            workflowSnapshot: metadata.workflowSnapshot || null,
             status: 'error', error: error.message, startedAt,
             finishedAt: Date.now(), duration: Date.now() - startedAt,
             steps, finalContext: context
@@ -150,15 +164,37 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
     let currentId = graph.start.id;
     let stepCount = 0;
 
+    async function checkpoint(node) {
+        if (control.cancelled) throw new Error('Workflow execution cancelled by user.');
+        if (control.stepBudget !== Infinity && control.stepBudget > 0) { control.stepBudget = Infinity; control.pauseAfterStep = true; }
+        if (control.paused) {
+            publishExecutionEvent('flowforge:debug-waiting', { runId, nodeId: node.id, type: node.type });
+            await new Promise(resolve => { control.release = resolve; });
+            if (control.cancelled) throw new Error('Workflow execution cancelled by user.');
+        }
+    }
+
     async function executeNode(node, iteration = null) {
         if (++stepCount > maxSteps) throw new Error('Execution safety limit reached.');
         const started = Date.now();
         const handler = handlers[node.type];
         if (!handler) throw new Error(`No handler found for ${node.type}`);
         const stepInfo = { runId, nodeId: node.id, type: node.type, iteration };
+        await checkpoint(node);
         publishExecutionEvent('flowforge:step-started', stepInfo);
         try {
-            const output = await handler(node.config || {}, context);
+            let output;
+            const retries = Math.min(Math.max(Number(node.config?.retryCount) || 0, 0), 5);
+            for (let attempt = 0; attempt <= retries; attempt++) {
+                try {
+                    output = await handler(node.config || {}, context);
+                    break;
+                } catch (error) {
+                    if (attempt >= retries) throw error;
+                    publishExecutionEvent('flowforge:step-retrying', { ...stepInfo, attempt: attempt + 1, maxRetries: retries, error: error.message });
+                    await new Promise(resolve => setTimeout(resolve, Math.min(500 * (attempt + 1), 2500)));
+                }
+            }
             context[node.id] = output;
             const step = {
                 nodeId: node.id, type: node.type, status: 'success',
@@ -167,7 +203,8 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
                 ...(iteration !== null ? { iteration } : {})
             };
             steps.push(step);
-            publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step });
+            publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step, context: structuredClone(context) });
+            if (control.pauseAfterStep) { control.pauseAfterStep = false; control.paused = true; publishExecutionEvent('flowforge:debug-paused', { runId, nodeId: node.id }); }
             return output;
         } catch (error) {
             const step = {
@@ -177,6 +214,7 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
             };
             steps.push(step);
             publishExecutionEvent('flowforge:step-completed', { ...stepInfo, ...step });
+            if (control.pauseAfterStep) { control.pauseAfterStep = false; control.paused = true; publishExecutionEvent('flowforge:debug-paused', { runId, nodeId: node.id }); }
             throw error;
         }
     }
@@ -188,7 +226,19 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
             if (executed.has(currentId)) throw new Error('A workflow path attempted to execute the same node more than once.');
             executed.add(currentId);
 
-            const output = await executeNode(node);
+            let output;
+            try {
+                output = await executeNode(node);
+            } catch (error) {
+                const recoveryId = node.config?.onErrorNodeId;
+                if (recoveryId && graph.nodeMap.has(recoveryId) && !executed.has(recoveryId)) {
+                    context.__lastError = { nodeId: node.id, type: node.type, message: error.message };
+                    publishExecutionEvent('flowforge:error-recovered', { runId, nodeId: node.id, recoveryNodeId: recoveryId, error: error.message });
+                    currentId = recoveryId;
+                    continue;
+                }
+                throw error;
+            }
             const outgoing = graph.adjacency.get(currentId) || [];
 
             if (node.type === 'Condition') {
@@ -291,14 +341,19 @@ export async function runWorkflow(nodes, connections, initialContext = {}, metad
             currentId = outgoing[0]?.to || null;
         }
     } catch (error) {
-        status = 'error';
+        status = control.cancelled ? 'cancelled' : 'error';
         errorMessage = error.message;
+    } finally {
+        activeExecutions.delete(runId);
     }
 
+    publishExecutionEvent('flowforge:workflow-finished', { runId, status, duration: Date.now() - startedAt, error: errorMessage });
     return {
         id: runId,
+        initialContext: structuredClone(initialContext),
         workflowId: metadata.workflowId || null,
         workflowName: metadata.workflowName || 'Untitled Workflow',
+        workflowSnapshot: metadata.workflowSnapshot || null,
         status,
         error: errorMessage,
         startedAt,

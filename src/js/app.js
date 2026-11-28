@@ -5,6 +5,7 @@ import { initializeSidebar } from './components/sidebar.js';
 import { initializeTheme } from './core/theme.js';
 import { initializeNavigation } from './core/navigation.js';
 import { state, initializeHistory } from './core/state.js';
+import { startLocalScheduler } from './core/advanced.js';
 
 function initializeApp() {
     console.info('Initializing FlowForge.');
@@ -16,6 +17,7 @@ function initializeApp() {
         initializeSidebar();
         initializePersistence(showNotification);
         initializeNavigation(showNotification);
+        startLocalScheduler();
     } catch (error) {
         console.error('Application initialization failed:', error);
         showNotification('FlowForge could not initialize correctly.');

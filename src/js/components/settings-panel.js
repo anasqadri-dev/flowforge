@@ -13,7 +13,7 @@ function escapeHTML(value = '') {
   })[char]);
 }
 
-function inputField(label, name, value = '', type = 'text', placeholder = '') {
+function inputField(label, name, value = '', type = 'text', placeholder = '', required = true) {
   return `
     <div class="form-group">
       <label for="${name}">${label}</label>
@@ -23,7 +23,7 @@ function inputField(label, name, value = '', type = 'text', placeholder = '') {
         name="${name}"
         value="${escapeHTML(value)}"
         placeholder="${escapeHTML(placeholder)}"
-        required
+        ${required ? 'required' : ''}
       />
     </div>
   `;
@@ -58,6 +58,12 @@ function textareaField(label, name, value = '', placeholder = '', required = tru
       >${escapeHTML(value)}</textarea>
     </div>
   `;
+}
+
+
+function recoveryNodeField(config, currentNodeId) {
+  const options = state.nodes.filter(node => node.id !== currentNodeId && !['Manual Start', 'Timer (Schedule)'].includes(node.type));
+  return `<div class="form-group"><label for="on-error-node-id">Recovery Node</label><select id="on-error-node-id" name="on-error-node-id"><option value="">Stop on error</option>${options.map(node => `<option value="${escapeHTML(node.id)}" ${config.onErrorNodeId === node.id ? 'selected' : ''}>${escapeHTML(node.type + ' — ' + node.id.slice(0, 8))}</option>`).join('')}</select><small class="field-help">Choose a node to continue from when this action fails after retries.</small></div>`;
 }
 
 export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) {
@@ -228,6 +234,34 @@ export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) 
       break;
 
 
+    case 'CSV Parse':
+    case 'CSV Generate':
+      formFields = textareaField('CSV Text / JSON Array', 'data-input', config.input || '', boxName === 'CSV Parse' ? 'name,email\\nAda,ada@example.com' : '[{"name":"Ada","email":"ada@example.com"}]');
+      if (boxName === 'CSV Generate') formFields += inputField('Output Filename', 'file-name', config.filename || 'flowforge-export.csv');
+      break;
+    case 'Read File':
+      formFields = '<p class="no-settings">Choose a file using the Builder input-file control before running this workflow.</p>';
+      break;
+    case 'Create File':
+      formFields = inputField('Filename', 'file-name', config.filename || 'flowforge-output.txt') + inputField('MIME Type', 'file-mime', config.mimeType || 'text/plain;charset=utf-8') + textareaField('File Content', 'file-content', config.content || '', 'Use {{variables}} to insert workflow data.');
+      break;
+    case 'Run Sub-workflow':
+      formFields = inputField('Saved Workflow ID', 'sub-workflow-id', config.workflowId || '', 'text', 'Paste a saved workflow ID');
+      break;
+    case 'CSV Parse':
+    case 'CSV Generate':
+      formFields = textareaField('CSV Text / JSON Array', 'data-input', config.input || '', boxName === 'CSV Parse' ? 'name,email\\nAda,ada@example.com' : '[{"name":"Ada","email":"ada@example.com"} ]');
+      if (boxName === 'CSV Generate') formFields += inputField('Output Filename', 'file-name', config.filename || 'flowforge-export.csv');
+      break;
+    case 'Read File':
+      formFields = '<p class="no-settings">Choose a file using the Builder input-file control before running this workflow.</p>';
+      break;
+    case 'Create File':
+      formFields = inputField('Filename', 'file-name', config.filename || 'flowforge-output.txt') + inputField('MIME Type', 'file-mime', config.mimeType || 'text/plain;charset=utf-8') + textareaField('File Content', 'file-content', config.content || '', 'Use {{variables}} to insert workflow data.');
+      break;
+    case 'Run Sub-workflow':
+      formFields = inputField('Saved Workflow ID', 'sub-workflow-id', config.workflowId || '', 'text', 'Paste a saved workflow ID');
+      break;
     case 'JSON Parse':
     case 'JSON Stringify':
     case 'Validate JSON':
@@ -311,7 +345,10 @@ export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) 
       <form id="settings-form" class="settings-form">
 
         ${formFields}
-
+        <details class="advanced-node-options"><summary>Reliability options</summary>
+          ${inputField('Retry failed step (0–5)', 'retry-count', config.retryCount ?? 0, 'number')}
+          ${recoveryNodeField(config, currentNodeId)}
+        </details>
         <button
           type="submit"
           class="btn-primary save-settings-btn"

@@ -6,6 +6,7 @@ import {
 } from './database.js';
 import { state, replaceWorkflowState } from './state.js';
 import { handlers } from './handlers.js';
+import { saveWorkflowVersion } from './advanced.js';
 
 let saveTimer = null;
 let notificationCallback = null;
@@ -48,6 +49,7 @@ export async function saveCurrentWorkflow(showMessage = true) {
     try {
         const workflow = createWorkflowData();
         await saveWorkflow(workflow);
+        await saveWorkflowVersion(workflow).catch(error => console.warn('Workflow version snapshot was not saved:', error));
         state.workflowId = workflow.id;
         state.createdAt = workflow.createdAt;
         writeActiveWorkflowId(workflow.id);

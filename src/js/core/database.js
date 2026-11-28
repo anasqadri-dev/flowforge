@@ -97,3 +97,7 @@ export async function getSetting(key) {
 export async function clearCustomTemplates() {
     return saveSetting('customTemplates', []);
 }
+
+export async function deleteSetting(key) {
+    return executeStore('settings', 'readwrite', store => requestResult(store.delete(key)));
+}

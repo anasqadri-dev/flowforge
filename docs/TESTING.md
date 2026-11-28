@@ -5,7 +5,7 @@ Run these checks in a modern desktop browser using the local static server or th
 ## 1. Application shell
 
 - [ ] Open the application and confirm the Dashboard loads without console errors.
-- [ ] Navigate between Dashboard, Builder, Runs, Logs, Templates, and Settings using the sidebar.
+- [ ] Navigate between Dashboard, Builder, Runs, Logs, Templates, Tutorials, and Settings using the sidebar.
 - [ ] Create a new workflow from the Dashboard while another workflow is active; confirm the previous workflow is preserved and the new workflow is empty.
 - [ ] Open an older saved workflow from the Dashboard and confirm its nodes, connections, and settings restore.
 - [ ] Confirm the active navigation item follows the current route.
@@ -17,7 +17,7 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Open Builder and confirm the box library, canvas, workflow toolbar, Run button, and settings panel are visible.
 - [ ] Search for a node type and confirm unrelated node types are filtered out.
 - [ ] Drag each available node type onto the canvas.
-- [ ] Confirm the Box Library has 28 node types grouped into Triggers, HTTP & API, Data & JSON, Arrays & Collections, Text, Math & Utilities, and Flow Control.
+- [ ] Confirm the Box Library has 33 node types grouped into Triggers, HTTP & API, Data & JSON, Arrays & Collections, Text, Math & Utilities, and Flow Control.
 - [ ] Run JSON Parse, JSON Stringify, Merge Data, and Validate JSON with valid and invalid input.
 - [ ] Run Filter Array and Array Length with JSON arrays; verify property matching and empty-array behavior.
 - [ ] Run Format Text, Replace Text, Split Text, and Join Text with normal text and interpolated values.
@@ -153,3 +153,34 @@ Do not mark the project fully verified until all critical checks pass on the dep
 - [ ] Run Write to Log and confirm its message appears in the Live Execution step output without needing to open DevTools.
 - [ ] Confirm notification delivery still works when native browser notifications are blocked or unsupported.
 - [ ] Confirm repeated notification workflows show a fresh message on every run.
+
+
+## 9. Debugger, backup, and advanced tools
+
+- [ ] Run a workflow and pause it while a step is active; confirm the monitor reports the paused state.
+- [ ] Use Step repeatedly and verify exactly one additional node runs per click; Resume should continue normally.
+- [ ] Cancel a paused workflow and confirm it ends with a cancelled status rather than remaining stuck.
+- [ ] Configure a retry count on an action and confirm retry events appear before a final failure/success.
+- [ ] Configure a recovery node on an action, force the action to fail, and confirm execution continues at the recovery node.
+- [ ] Confirm the live variable inspector displays global, environment, and step-created variables.
+- [ ] Configure global variables and switch environment profiles; confirm active profile values are available through interpolation.
+- [ ] Use CSV Parse with quoted commas and escaped quotes; use CSV Generate and download the generated file.
+- [ ] Choose a local input file, run Read File, and verify the file name and contents appear in step output.
+- [ ] Run Create File and download its output from the execution monitor.
+- [ ] Run a saved workflow through Run Sub-workflow and confirm its result is returned to the parent context.
+- [ ] Duplicate a workflow and confirm the original remains unchanged.
+- [ ] Save multiple versions, restore an earlier version, and confirm nodes/connections are restored.
+- [ ] Schedule a saved workflow for a near-future time; keep the browser tab open and confirm the scheduled run is saved.
+- [ ] Close the tab before a scheduled time and confirm the documentation clearly states background execution is not supported.
+- [ ] Export a CSV report and open the printable report, choosing Save as PDF in the browser print dialog.
+- [ ] Download a complete application backup and inspect that it contains workflows, runs, settings, variables, environments, schedules, and versions but no template payloads.
+- [ ] Restore a valid backup and confirm existing data is replaced only after confirmation and a safety backup is downloaded.
+- [ ] Try malformed JSON, wrong application identifier, unsupported backup version, and oversized backup files; confirm each is rejected without changing stored data.
+- [ ] Confirm Showcase and Analytics are not present in the sidebar or route handling.
+- [ ] Complete tutorial checkboxes and confirm progress persists after refresh.
+- [ ] Confirm Settings contains Appearance, Workflow Preferences, Data Management, About, Backup & Restore, Global Variables, and Keyboard Shortcuts only.
+- [ ] Confirm Environment Profiles, Local Workflow Scheduler, and Workflow Version History settings sections are absent.
+- [ ] Download a backup, then restore it and confirm templates are excluded and current data is protected by a safety backup.
+- [ ] Replay a previous run after editing or deleting its current saved workflow; confirm the run snapshot is used.
+- [ ] Confirm debugger controls are small, located below the live output, and do not cover step results.
+- [ ] Confirm JSON log messages show readable field labels and values, with formatted raw data available on demand.

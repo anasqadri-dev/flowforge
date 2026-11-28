@@ -3,10 +3,12 @@ import { renderRuns, initRuns } from '../pages/runs.js';
 import { renderLogs, initLogs } from '../pages/logs.js';
 import { renderTemplatesPage } from '../pages/templates.js';
 import { renderSettingsPage } from '../pages/settings.js';
+import { renderTutorials, initTutorials } from '../pages/tutorials.js';
 import { initNodes } from '../components/nodes.js';
 import { refreshIcons } from './icons.js';
 import { waitForWorkflowRestore, createNewWorkflow, loadWorkflowById } from './persistence.js';
 import { getWorkflows, getRuns } from './database.js';
+import { duplicateWorkflow } from './advanced.js';
 
 function renderDashboard() {
     return `
@@ -53,11 +55,12 @@ async function loadDashboardData(showNotification) {
         saved.innerHTML = workflows.slice(0, 5).map(workflow => `
             <li class="dashboard-run-item">
                 <div><strong>${escapeHTML(workflow.name || 'Untitled Workflow')}</strong>
-                <p>Updated ${new Date(workflow.updatedAt || workflow.createdAt).toLocaleString()}</p></div>
-                <button type="button" class="btn-primary open-workflow" data-workflow-id="${escapeHTML(workflow.id)}">Open</button>
+                <p>Updated ${new Date(workflow.updatedAt || workflow.createdAt).toLocaleString()}</p><small class="muted-text">Workflow ID: ${escapeHTML(workflow.id)}</small></div>
+                <div class="dashboard-workflow-actions"><button type="button" class="btn-primary open-workflow" data-workflow-id="${escapeHTML(workflow.id)}">Open</button><button type="button" class="btn duplicate-workflow" data-workflow-id="${escapeHTML(workflow.id)}">Duplicate</button></div>
             </li>
         `).join('') || '<li class="empty">No saved workflows yet. Create your first workflow.</li>';
 
+        saved.querySelectorAll('.duplicate-workflow').forEach(button => button.addEventListener('click', async () => { try { await duplicateWorkflow(button.dataset.workflowId); await loadDashboardData(showNotification); showNotification('Workflow duplicated.'); } catch (error) { showNotification(error.message || 'Unable to duplicate workflow.'); } }));
         saved.querySelectorAll('.open-workflow').forEach(button => {
             button.addEventListener('click', async () => {
                 button.disabled = true;
@@ -140,6 +143,10 @@ export function initializeNavigation(showNotification) {
                     break;
                 case '#settings':
                     await renderSettingsPage(content, () => requestId === routeRequest);
+                    break;
+                case '#tutorials':
+                    content.innerHTML = renderTutorials();
+                    initTutorials(content);
                     break;
                 default:
                     window.location.hash = '#dashboard';
