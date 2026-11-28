@@ -37,7 +37,7 @@ The application runs entirely in the browser. It does not require a backend serv
 - Workflow execution with sequential steps, conditions, and bounded loop bodies.
 - Variable interpolation between workflow steps.
 - Execution history with step-level inputs, outputs, and errors.
-- Automatic local saving through IndexedDB.
+- Create multiple workflows, reopen saved workflows from the Dashboard, and automatically save through IndexedDB.
 - JSON workflow import and export.
 - Built-in and user-created workflow templates.
 - Light and dark themes.
