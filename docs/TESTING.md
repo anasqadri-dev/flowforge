@@ -44,7 +44,9 @@ Run these checks in a modern desktop browser using the local static server or th
 - [ ] Run a Wait node and confirm the configured duration is respected.
 - [ ] Start a long-running workflow, switch to another workflow before it finishes, and confirm the run is recorded against the workflow that actually ran.
 - [ ] Run an HTTP Request against a CORS-enabled test endpoint; verify method, headers, body, response parsing, timeout, and non-2xx handling.
-- [ ] Run Send Notification after granting browser permission; then test denied permission.
+- [ ] Run Send Notification with browser permission granted; confirm both the in-app toast and browser notification appear.
+- [ ] Run Send Notification with browser permission denied or unavailable; confirm the in-app toast still displays the interpolated message and the workflow completes successfully.
+- [ ] Run Customer Welcome Notification and confirm the displayed message includes the configured customer name.
 - [ ] Confirm a failed step is marked as failed and its error is visible in Run History.
 
 ## 4. Persistence and import/export
