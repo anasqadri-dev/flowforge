@@ -308,9 +308,10 @@ function bindExecutionMonitor() {
         document.querySelectorAll('.debugger-controls button').forEach(button => { button.disabled = true; });
         document.querySelectorAll('#drawflow-container .connection').forEach(path => path.classList.remove('execution-flow-active'));
         const succeeded = result.status === 'success';
-        status.textContent = succeeded ? 'SUCCESS' : 'FAILED';
-        status.className = 'run-status ' + (succeeded ? 'success' : 'error');
-        summary.textContent = (succeeded ? 'Workflow completed' : 'Workflow stopped: ' + (result.error || 'Unknown error'))
+        const cancelled = result.status === 'cancelled';
+        status.textContent = succeeded ? 'SUCCESS' : cancelled ? 'CANCELLED' : 'FAILED';
+        status.className = 'run-status ' + (succeeded ? 'success' : cancelled ? 'idle' : 'error');
+        summary.textContent = (succeeded ? 'Workflow completed' : cancelled ? 'Workflow cancelled' : 'Workflow stopped: ' + (result.error || 'Unknown error'))
             + ' · ' + (result.duration ?? 0) + ' ms';
         progress.style.width = '100%';
         finalContext.textContent = JSON.stringify(result.finalContext || {}, null, 2);
@@ -367,7 +368,7 @@ function initializeRunButton() {
             if (result.status !== 'success' || !hasNotificationStep) {
                 showNotification(result.status === 'success'
                     ? 'Workflow completed successfully in ' + result.duration + ' ms.'
-                    : 'Workflow failed: ' + result.error, 4000);
+                    : result.status === 'cancelled' ? 'Workflow execution cancelled.' : 'Workflow failed: ' + result.error, 4000);
             }
             if (result.status === 'error' && result.steps.length && state.workflowId === result.workflowId) {
                 const failed = result.steps.find(step => step.status === 'error');
