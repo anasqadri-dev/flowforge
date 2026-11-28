@@ -109,15 +109,16 @@ export function addConnection({ from, to, branch = null, sourceHandle = null }) 
     if (state.connections.some(connection => connection.from === from && connection.to === to)) return null;
 
     const outgoing = state.connections.filter(connection => connection.from === from);
+    if (['Send Notification', 'Write to Log'].includes(sourceNode.type)) return null;
     if (sourceNode.type === 'Condition') {
         const outputPort = sourceHandle || (branch === 'false' ? 'output_2' : 'output_1');
         if (!['output_1', 'output_2'].includes(outputPort)) return null;
+        if (branch && branch !== (outputPort === 'output_2' ? 'false' : 'true')) return null;
         if (outgoing.some(connection =>
             (connection.sourceHandle || (connection.branch === 'false' ? 'output_2' : 'output_1')) === outputPort
         )) return null;
     } else if (outgoing.length > 0) {
         // The execution engine follows one path for ordinary nodes.
-        if (sourceHandle && sourceHandle !== 'output_1') return null;
         return null;
     }
 
