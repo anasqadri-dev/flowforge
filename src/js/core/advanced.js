@@ -1,4 +1,4 @@
-import { getSetting, saveSetting, getWorkflows, saveWorkflow, getRuns, saveRun } from './database.js';
+import { getSetting, saveSetting, getWorkflows, getWorkflow, saveWorkflow, getRuns, saveRun } from './database.js';
 
 export async function getGlobalVariables() {
     return (await getSetting('globalVariables')) || {};
@@ -126,4 +126,35 @@ export async function buildAnalytics() {
     const failed = runs.filter(run => run.status !== 'success').length;
     const averageDuration = runs.length ? Math.round(runs.reduce((sum, run) => sum + (run.duration || 0), 0) / runs.length) : 0;
     return { workflowCount: workflows.length, runCount: runs.length, successful, failed, successRate: runs.length ? Math.round(successful / runs.length * 100) : 0, averageDuration };
+}
+
+let schedulerTimer = null;
+export function startLocalScheduler() {
+    if (schedulerTimer) return;
+    const tick = async () => {
+        const schedules = await getSchedules().catch(() => []);
+        let changed = false;
+        for (const item of schedules) {
+            if (item.status !== 'pending' || item.runAt > Date.now()) continue;
+            item.status = 'running'; item.startedAt = Date.now(); changed = true;
+            try {
+                const workflow = await getWorkflow(item.workflowId);
+                if (!workflow) throw new Error('Scheduled workflow no longer exists.');
+                const { runWorkflow } = await import('./engine.js');
+                const result = await runWorkflow(workflow.nodes, workflow.connections, {}, { workflowId: workflow.id, workflowName: workflow.name });
+                await saveRun(result);
+                document.dispatchEvent(new CustomEvent('flowforge:run-saved', { detail: result }));
+                item.status = result.status === 'success' ? 'completed' : 'failed';
+                item.resultId = result.id; item.error = result.error || null;
+                document.dispatchEvent(new CustomEvent('flowforge:scheduled-run-completed', { detail: { scheduleId: item.id, result } }));
+            } catch (error) {
+                item.status = 'failed'; item.error = error.message;
+                document.dispatchEvent(new CustomEvent('flowforge:scheduled-run-failed', { detail: { scheduleId: item.id, error: error.message } }));
+            }
+            item.finishedAt = Date.now();
+        }
+        if (changed) await updateSchedules(schedules);
+    };
+    tick();
+    schedulerTimer = setInterval(tick, 10000);
 }
