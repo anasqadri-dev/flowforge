@@ -10,19 +10,19 @@ export async function mountSettingsTools(container) {
     const section = document.createElement('div');
     section.className = 'settings-advanced-tools';
     section.innerHTML = `
-        <section class="settings-card settings-card-wide">
+        <section class="settings-card settings-card-wide backup-card">
             <div class="settings-card-heading">
                 <div><h2>Backup &amp; Restore</h2><p>Keep a copy of your saved workflows and important application data, or restore it later.</p></div>
                 <i data-lucide="database-backup" aria-hidden="true"></i>
             </div>
             <div class="settings-actions">
-                <button id="download-app-backup" class="btn-primary" type="button">Download Complete Backup</button>
-                <button id="restore-app-backup" class="btn" type="button">Restore from Backup</button>
+                <button id="download-app-backup" class="btn-primary" type="button"><i data-lucide="download" aria-hidden="true"></i> Download Complete Backup</button>
+                <button id="restore-app-backup" class="btn" type="button"><i data-lucide="upload" aria-hidden="true"></i> Restore from Backup</button>
                 <input id="app-backup-file" type="file" accept=".json,application/json" hidden>
             </div>
             <p class="muted-text">Includes workflows, run history, preferences, variables and saved application data. Templates are excluded because they are already included with FlowForge. A safety backup is downloaded before restoring.</p>
         </section>
-        <section class="settings-card">
+        <section class="settings-card global-variables-card">
             <div class="settings-card-heading">
                 <div><h2>Global Variables</h2><p>Save reusable values that workflows can use when they run.</p></div>
                 <i data-lucide="braces" aria-hidden="true"></i>
@@ -32,7 +32,7 @@ export async function mountSettingsTools(container) {
             <p id="global-variables-help" class="muted-text">Enter a valid JSON object, for example: { "customerName": "Ayesha" }</p>
             <button id="save-global-variables" class="btn-primary" type="button">Save Global Variables</button>
         </section>
-        <section class="settings-card">
+        <section class="settings-card shortcuts-card">
             <div class="settings-card-heading">
                 <div><h2>Keyboard Shortcuts</h2><p>Quick ways to work in the workflow builder.</p></div>
                 <i data-lucide="keyboard" aria-hidden="true"></i>
