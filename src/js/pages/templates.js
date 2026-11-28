@@ -151,8 +151,9 @@ async function getAllTemplates() {
   ];
 }
 
-export async function renderTemplatesPage(container) {
+export async function renderTemplatesPage(container, isCurrent = () => true) {
   const templates = await getAllTemplates();
+  if (!isCurrent()) return;
 
   container.innerHTML = `
     <section class="templates-page">
