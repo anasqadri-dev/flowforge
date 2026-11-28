@@ -75,7 +75,7 @@ function makeStatusRouterTemplate() {
   };
 }
 
-const BUILT_IN_TEMPLATES = [
+export const BUILT_IN_TEMPLATES = [
   {
     id: 'http-log',
     name: 'HTTP Request Logger',
