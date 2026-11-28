@@ -123,3 +123,10 @@ Do not mark the project fully verified until all critical checks pass on the dep
 - [ ] Repeat at 67%, 80%, 100%, and 125% browser zoom; confirm the desktop layout remains usable at each zoom.
 - [ ] Open node settings and confirm the settings panel takes space from the canvas without pushing the Run Workflow button off-screen.
 - [ ] Confirm tablet/mobile layouts remain scrollable and usable.
+
+
+## Repeated live execution and Builder navigation
+- [ ] Run the same valid workflow at least three times in a row without refreshing the page; verify every run clears the previous step list and shows fresh step events and outputs.
+- [ ] Navigate from Builder to Dashboard and back to Builder, then run the workflow; verify the live monitor updates in the newly rendered Builder.
+- [ ] Run a workflow that fails, correct the configuration, and run it again; verify the monitor changes from FAILED to RUNNING and then shows the new result.
+- [ ] Run a workflow with a validation error, fix the graph, and run again without refreshing; verify the monitor displays the error and recovers for the next run.
