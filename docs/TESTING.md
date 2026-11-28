@@ -102,3 +102,12 @@ Run these checks in a modern desktop browser using the local static server or th
 ## Release sign-off
 
 Do not mark the project fully verified until all critical checks pass on the deployed site. GitHub Pages reporting a successful deployment only confirms the static site deployment job completed; it does not prove the application's interactive workflows work correctly.
+
+
+## Builder workspace scrolling and sizing
+- [ ] Confirm the Builder page can scroll vertically when the workspace exceeds the viewport height.
+- [ ] Confirm the workspace can scroll horizontally when the canvas and settings panel do not fit the viewport width.
+- [ ] Confirm the Box Library has its own vertical scrollbar and remains usable while the canvas is large.
+- [ ] Confirm the canvas is at least 1050 × 900 on desktop and supports placing and connecting more than five nodes without running out of visible workspace.
+- [ ] Confirm the node settings panel has its own vertical scrollbar when its form is taller than the viewport.
+- [ ] Repeat the checks at tablet and mobile widths; confirm the canvas remains horizontally scrollable rather than shrinking to an unusable size.
