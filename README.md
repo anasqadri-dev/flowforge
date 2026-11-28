@@ -48,12 +48,11 @@ The application runs entirely in the browser. It does not require a backend serv
 - Light and dark themes.
 - Step debugger with pause, resume, single-step execution, cancellation, live variable inspection, and animated node/connection feedback.
 - Configurable retry attempts and recovery-node routing for failed actions.
-- Global variables and Development/Testing/Production environment profiles.
+- Reusable global variables.
 - CSV parsing/generation, browser-selected file input, generated file downloads, and reusable sub-workflows.
-- Local scheduled runs while the browser tab remains open.
-- Workflow duplication, up to 30 saved versions per workflow, and version restoration.
-- Application backup/restore for workflows, run history, settings, variables, environments, schedules, and versions (templates are excluded).
-- Workflow Showcase, one-click Demo Mode, interactive tutorials, execution analytics, and CSV/printable PDF reports.
+- Workflow duplication and saved execution replay using the exact workflow snapshot from the selected run.
+- Application backup/restore for workflows, run history, settings and variables (templates are excluded).
+- One-click Demo Mode, interactive tutorials, and CSV/printable PDF execution reports.
 - Responsive application layout.
 - Text-only FlowForge sidebar wordmark and a custom SVG browser favicon.
 
@@ -137,9 +136,7 @@ When a workflow runs, the Builder displays a live execution panel directly over 
 │       │   └── theme.js
 │       └── pages/
 │           ├── builder.js
-│           ├── analytics.js
 │           ├── logs.js
-│           ├── showcase.js
 │           ├── tutorials.js
 │           ├── runs.js
 │           ├── settings.js
@@ -208,3 +205,14 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 **FlowForge — A Web Engineering Final Project**
 
 Developed at Sukkur IBA University, Department of Computer Science.
+
+
+## Interface and data management
+
+The sidebar focuses on Dashboard, Builder, Runs, Logs, Templates, Tutorials, and Settings. Showcase and Analytics are not part of the application navigation.
+
+Settings are intentionally focused on appearance, workflow preferences, backup and restore, reusable global variables, keyboard shortcuts, and application information. Environment profiles, local scheduling, and workflow version-history controls are not exposed in Settings.
+
+Execution controls are compact and placed below the live step output so they do not cover workflow results. Run History replay uses the workflow snapshot saved with that run, so replay remains available even if the currently saved workflow has since changed or been deleted.
+
+The Logs page presents structured JSON as readable fields first, with an optional formatted-data view for users who want the full details.
