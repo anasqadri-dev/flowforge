@@ -143,7 +143,7 @@ export function startLocalScheduler() {
                 const workflow = await getWorkflow(item.workflowId);
                 if (!workflow) throw new Error('Scheduled workflow no longer exists.');
                 const { runWorkflow } = await import('./engine.js');
-                const result = await runWorkflow(workflow.nodes, workflow.connections, {}, { workflowId: workflow.id, workflowName: workflow.name });
+                const result = await runWorkflow(workflow.nodes, workflow.connections, {}, { workflowId: workflow.id, workflowName: workflow.name, workflowSnapshot: { nodes: workflow.nodes, connections: workflow.connections } });
                 await saveRun(result);
                 document.dispatchEvent(new CustomEvent('flowforge:run-saved', { detail: result }));
                 item.status = result.status === 'success' ? 'completed' : 'failed';
