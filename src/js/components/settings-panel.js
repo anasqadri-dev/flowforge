@@ -62,7 +62,7 @@ function textareaField(label, name, value = '', placeholder = '', required = tru
 
 
 function recoveryNodeField(config, currentNodeId) {
-  const options = state.nodes.filter(node => node.id !== currentNodeId);
+  const options = state.nodes.filter(node => node.id !== currentNodeId && !['Manual Start', 'Timer (Schedule)'].includes(node.type));
   return `<div class="form-group"><label for="on-error-node-id">Recovery Node</label><select id="on-error-node-id" name="on-error-node-id"><option value="">Stop on error</option>${options.map(node => `<option value="${escapeHTML(node.id)}" ${config.onErrorNodeId === node.id ? 'selected' : ''}>${escapeHTML(node.type + ' — ' + node.id.slice(0, 8))}</option>`).join('')}</select><small class="field-help">Choose a node to continue from when this action fails after retries.</small></div>`;
 }
 
