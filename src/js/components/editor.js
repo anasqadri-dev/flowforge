@@ -1,4 +1,4 @@
-import { state, replaceWorkflowState } from '../core/state.js';
+import { state } from '../core/state.js';
 
 let editor = null;
 let importing = false;
