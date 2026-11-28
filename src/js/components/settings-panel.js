@@ -228,6 +228,20 @@ export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) 
       break;
 
 
+    case 'CSV Parse':
+    case 'CSV Generate':
+      formFields = textareaField('CSV Text / JSON Array', 'data-input', config.input || '', boxName === 'CSV Parse' ? 'name,email\\nAda,ada@example.com' : '[{"name":"Ada","email":"ada@example.com"}]');
+      if (boxName === 'CSV Generate') formFields += inputField('Output Filename', 'file-name', config.filename || 'flowforge-export.csv');
+      break;
+    case 'Read File':
+      formFields = '<p class="no-settings">Choose a file using the Builder input-file control before running this workflow.</p>';
+      break;
+    case 'Create File':
+      formFields = inputField('Filename', 'file-name', config.filename || 'flowforge-output.txt') + inputField('MIME Type', 'file-mime', config.mimeType || 'text/plain;charset=utf-8') + textareaField('File Content', 'file-content', config.content || '', 'Use {{variables}} to insert workflow data.');
+      break;
+    case 'Run Sub-workflow':
+      formFields = inputField('Saved Workflow ID', 'sub-workflow-id', config.workflowId || '', 'text', 'Paste a saved workflow ID');
+      break;
     case 'JSON Parse':
     case 'JSON Stringify':
     case 'Validate JSON':
@@ -311,7 +325,10 @@ export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) 
       <form id="settings-form" class="settings-form">
 
         ${formFields}
-
+        <details class="advanced-node-options"><summary>Reliability options</summary>
+          ${inputField('Retry failed step (0–5)', 'retry-count', config.retryCount ?? 0, 'number')}
+          ${inputField('Recovery node ID (optional)', 'on-error-node-id', config.onErrorNodeId || '', 'text', 'Node ID to continue after failure')}
+        </details>
         <button
           type="submit"
           class="btn-primary save-settings-btn"
