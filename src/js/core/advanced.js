@@ -131,14 +131,19 @@ export async function buildAnalytics() {
 }
 
 let schedulerTimer = null;
+let schedulerBusy = false;
 export function startLocalScheduler() {
     if (schedulerTimer) return;
-    const tick = async () => {
+    const runTick = async () => {
+        if (schedulerBusy) return;
+        schedulerBusy = true;
+        try {
         const schedules = await getSchedules().catch(() => []);
         let changed = false;
         for (const item of schedules) {
             if (item.status !== 'pending' || item.runAt > Date.now()) continue;
             item.status = 'running'; item.startedAt = Date.now(); changed = true;
+            await updateSchedules(schedules);
             try {
                 const workflow = await getWorkflow(item.workflowId);
                 if (!workflow) throw new Error('Scheduled workflow no longer exists.');
@@ -156,6 +161,12 @@ export function startLocalScheduler() {
             item.finishedAt = Date.now();
         }
         if (changed) await updateSchedules(schedules);
+        } finally { schedulerBusy = false; }
+    };
+    const tick = () => {
+        if (navigator.locks?.request) {
+            navigator.locks.request('flowforge-local-scheduler', runTick).catch(error => console.warn('Scheduler lock was unavailable:', error));
+        } else runTick().catch(error => console.error('Local scheduler failed:', error));
     };
     tick();
     schedulerTimer = setInterval(tick, 10000);
