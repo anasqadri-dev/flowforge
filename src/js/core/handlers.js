@@ -131,14 +131,24 @@ export const handlers = {
 
     'Send Notification': async (config, context) => {
         const message = interpolate(config.message || 'Workflow notification', context);
-        if (!('Notification' in window)) throw new Error('Browser notifications are not supported.');
-        if (Notification.permission === 'default') {
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') throw new Error('Notification permission was not granted.');
+
+        // Always deliver an in-app message. Browser notifications are an optional
+        // enhancement because permission may be unavailable or denied.
+        document.dispatchEvent(new CustomEvent('flowforge:notify', {
+            detail: { message }
+        }));
+
+        let browserNotificationDelivered = false;
+        if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+                new Notification('FlowForge', { body: message });
+                browserNotificationDelivered = true;
+            } catch (error) {
+                console.warn('Browser notification could not be displayed:', error);
+            }
         }
-        if (Notification.permission !== 'granted') throw new Error('Notification permission is denied.');
-        new Notification('FlowForge', { body: message });
-        return { message, delivered: true };
+
+        return { message, delivered: true, inAppDelivered: true, browserNotificationDelivered };
     },
 
     'Write to Log': async (config, context) => {
