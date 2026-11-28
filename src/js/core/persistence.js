@@ -1,7 +1,8 @@
 import {
     saveWorkflow,
     getWorkflows,
-    getWorkflow
+    getWorkflow,
+    getSetting
 } from './database.js';
 import { state, replaceWorkflowState } from './state.js';
 
@@ -80,12 +81,38 @@ async function restoreLatestWorkflow() {
         const activeId = localStorage.getItem('flowforge-active-workflow');
         const active = activeId ? await getWorkflow(activeId) : null;
         const workflow = active || workflows[0];
-        if (workflow) await loadWorkflowById(workflow.id);
-        else replaceWorkflowState({ nodes: [], connections: [] });
+        if (workflow) {
+            await loadWorkflowById(workflow.id);
+        } else {
+            const preferences = await getSetting('preferences').catch(() => null);
+            state.workflowName = preferences?.defaultWorkflowName || 'Untitled Workflow';
+            replaceWorkflowState({ nodes: [], connections: [] });
+        }
     } catch (error) {
         console.error('Unable to restore workflow:', error);
         replaceWorkflowState({ nodes: [], connections: [] });
     }
+}
+
+export async function createNewWorkflow() {
+    cancelPendingAutoSave();
+
+    // Preserve the current workflow before switching to a new empty one.
+    if (state.workflowId || state.nodes.length || state.connections.length) {
+        const saved = await saveCurrentWorkflow(false);
+        if (!saved) throw new Error('The current workflow could not be saved.');
+    }
+
+    const preferences = await getSetting('preferences').catch(() => null);
+    state.workflowId = crypto.randomUUID();
+    state.workflowName = preferences?.defaultWorkflowName || 'Untitled Workflow';
+    state.createdAt = Date.now();
+    replaceWorkflowState({ nodes: [], connections: [] });
+    cancelPendingAutoSave();
+
+    const created = await saveCurrentWorkflow(false);
+    if (!created) throw new Error('A new workflow could not be created.');
+    return created;
 }
 
 export function waitForWorkflowRestore() {
