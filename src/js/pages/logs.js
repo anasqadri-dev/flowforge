@@ -1,6 +1,7 @@
 import { getRuns } from '../core/database.js';
 
 let allLogs = [];
+let runSavedListenerRegistered = false;
 
 export function renderLogs() {
     return `
@@ -203,7 +204,12 @@ export function initLogs() {
         }
     });
 
-    document.addEventListener('flowforge:run-saved', refreshLogs);
+    if (!runSavedListenerRegistered) {
+        document.addEventListener('flowforge:run-saved', () => {
+            if (document.querySelector('.logs-page')) refreshLogs();
+        });
+        runSavedListenerRegistered = true;
+    }
     refreshLogs().catch(error => {
         console.error('Could not load execution logs:', error);
         const list = document.getElementById('logs-list');
