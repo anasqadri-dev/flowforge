@@ -1,28 +1,45 @@
-const notificationElement = document.getElementById("notification");
 let notificationTimeout = null;
+let notificationQueue = [];
+let notificationVisible = false;
 
-export function showNotification(message, duration = 3000) {
-    if (!notificationElement) {
-        console.error("Notification element was not found.");
-        return;
-    }
+function displayNextNotification() {
+    const element = document.getElementById('notification');
+    if (!element || notificationVisible || !notificationQueue.length) return;
 
-    notificationElement.textContent = message;
-    notificationElement.classList.add("show");
+    const item = notificationQueue.shift();
+    notificationVisible = true;
+    element.textContent = item.message;
+    element.classList.add('show');
+    element.setAttribute('role', 'status');
+    element.setAttribute('aria-live', 'polite');
 
     clearTimeout(notificationTimeout);
-
     notificationTimeout = setTimeout(() => {
-        notificationElement.classList.remove("show");
+        element.classList.remove('show');
         notificationTimeout = null;
-    }, duration);
+        notificationVisible = false;
+        displayNextNotification();
+    }, item.duration);
 }
 
-// The template validator imports this module in Node.js with a minimal DOM stub.
-// Register the browser event listener only when the DOM API is available.
-if (typeof document.addEventListener === "function") {
-    document.addEventListener("flowforge:notify", event => {
-        const message = event.detail?.message;
-        if (typeof message === "string" && message.trim()) showNotification(message, 5000);
-    });
+export function showNotification(message, duration = 3500) {
+    const text = String(message ?? '').trim();
+    if (!text) return;
+    notificationQueue.push({ message: text, duration: Math.max(1500, Number(duration) || 3500) });
+    displayNextNotification();
+}
+
+function displayWorkflowNotifications(event) {
+    const messages = (event.detail?.steps || [])
+        .filter(step => step.type === 'Send Notification' && step.status === 'success')
+        .map(step => step.output?.message)
+        .filter(message => typeof message === 'string' && message.trim());
+
+    messages.forEach(message => showNotification(message, 6000));
+}
+
+// The app-level toast is deliberately shown after execution completes. This
+// prevents the Run button's completion summary from immediately replacing it.
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('flowforge:workflow-completed', displayWorkflowNotifications);
 }
