@@ -60,6 +60,12 @@ function textareaField(label, name, value = '', placeholder = '', required = tru
   `;
 }
 
+
+function recoveryNodeField(config, currentNodeId) {
+  const options = state.nodes.filter(node => node.id !== currentNodeId);
+  return `<div class="form-group"><label for="on-error-node-id">Recovery Node</label><select id="on-error-node-id" name="on-error-node-id"><option value="">Stop on error</option>${options.map(node => `<option value="${escapeHTML(node.id)}" ${config.onErrorNodeId === node.id ? 'selected' : ''}>${escapeHTML(node.type + ' — ' + node.id.slice(0, 8))}</option>`).join('')}</select><small class="field-help">Choose a node to continue from when this action fails after retries.</small></div>`;
+}
+
 export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) {
   if (!boxName) return '';
 
@@ -341,7 +347,7 @@ export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) 
         ${formFields}
         <details class="advanced-node-options"><summary>Reliability options</summary>
           ${inputField('Retry failed step (0–5)', 'retry-count', config.retryCount ?? 0, 'number')}
-          ${inputField('Recovery node ID (optional)', 'on-error-node-id', config.onErrorNodeId || '', 'text', 'Node ID to continue after failure', false)}
+          ${recoveryNodeField(config, currentNodeId)}
         </details>
         <button
           type="submit"
