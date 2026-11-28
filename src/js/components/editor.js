@@ -5,34 +5,31 @@ let importing = false;
 const drawflowToAppId = new Map();
 
 const nodePorts = {
-    'Manual Start': { inputs: 0, outputs: 1 },
-    'Timer (Schedule)': { inputs: 0, outputs: 1 },
-    'HTTP Request': { inputs: 1, outputs: 1 },
-    'Transform Data': { inputs: 1, outputs: 1 },
-    'Set Variable': { inputs: 1, outputs: 1 },
-    'Wait': { inputs: 1, outputs: 1 },
-    'Condition': { inputs: 1, outputs: 2 },
-    'Loop': { inputs: 1, outputs: 1 },
-    'Send Notification': { inputs: 1, outputs: 0 },
-    'Write to Log': { inputs: 1, outputs: 0 }
+    'Manual Start': { inputs: 0, outputs: 1 }, 'Timer (Schedule)': { inputs: 0, outputs: 1 },
+    'HTTP Request': { inputs: 1, outputs: 1 }, 'Transform Data': { inputs: 1, outputs: 1 },
+    'Set Variable': { inputs: 1, outputs: 1 }, 'Wait': { inputs: 1, outputs: 1 },
+    'Condition': { inputs: 1, outputs: 2 }, 'Loop': { inputs: 1, outputs: 1 },
+    'Send Notification': { inputs: 1, outputs: 0 }, 'Write to Log': { inputs: 1, outputs: 0 }
 };
 
 const icons = {
-    'Manual Start': 'play', 'Timer (Schedule)': 'clock',
-    'HTTP Request': 'globe', 'Transform Data': 'sliders-horizontal',
-    'Set Variable': 'variable', 'Wait': 'timer',
-    'Condition': 'git-branch', 'Loop': 'repeat',
-    'Send Notification': 'bell', 'Write to Log': 'file-text'
+    'Manual Start':'play','Timer (Schedule)':'clock','HTTP Request':'globe',
+    'Transform Data':'sliders-horizontal','Set Variable':'variable','Wait':'timer',
+    'Condition':'git-branch','Loop':'repeat','Send Notification':'bell','Write to Log':'file-text',
+    'JSON Parse':'braces','JSON Stringify':'code','Merge Data':'combine','Validate JSON':'shield-check',
+    'Filter Array':'list-filter','Array Length':'list-ordered','Format Text':'text',
+    'Replace Text':'replace','Split Text':'scissors','Join Text':'list','Math Operation':'calculator',
+    'Random Number':'shuffle','Generate UUID':'fingerprint','Current Date & Time':'calendar-clock',
+    'URL Encode':'link','URL Decode':'unlink','Base64 Encode':'lock','Base64 Decode':'unlock'
 };
 
 function drawflowNodeId(index) { return String(index + 1); }
-
 export function getDrawflowEditor() { return editor; }
 export function isImportingDrawflow() { return importing; }
 
 function escapeHTML(value = '') {
     return String(value).replace(/[&<>"']/g, character => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     })[character]);
 }
 
@@ -53,7 +50,6 @@ export function getAppNodeId(drawflowId) {
     const node = editor?.getNodeFromId(drawflowId);
     return node?.data?.appNodeId || drawflowToAppId.get(String(drawflowId)) || null;
 }
-
 export function registerDrawflowNode(drawflowId, appNodeId) {
     drawflowToAppId.set(String(drawflowId), appNodeId);
 }
@@ -65,15 +61,15 @@ export function exportStateToDrawflow() {
     state.nodes.forEach((node, index) => {
         const id = drawflowNodeId(index);
         const ports = getNodePortCounts(node.type);
-        const inputs = {};
-        const outputs = {};
+        const inputs = {}, outputs = {};
         for (let i = 1; i <= ports.inputs; i++) inputs['input_' + i] = { connections: [] };
         for (let i = 1; i <= ports.outputs; i++) outputs['output_' + i] = { connections: [] };
         data[id] = {
-            id: Number(id), name: node.type, data: { appNodeId: node.id, nodeType: node.type, config: structuredClone(node.config || {}) },
+            id: Number(id), name: node.type,
+            data: { appNodeId: node.id, nodeType: node.type, config: structuredClone(node.config || {}) },
             class: node.type.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-            html: createDrawflowNodeHtml(node.type, node.config || {}),
-            typenode: false, inputs, outputs, pos_x: Number(node.x) || 0, pos_y: Number(node.y) || 0
+            html: createDrawflowNodeHtml(node.type, node.config || {}), typenode: false,
+            inputs, outputs, pos_x: Number(node.x) || 0, pos_y: Number(node.y) || 0
         };
     });
     state.connections.forEach(edge => {
@@ -96,9 +92,7 @@ export function renderDrawflowFromState() {
         const exported = exportStateToDrawflow();
         editor.import(exported);
         drawflowToAppId.clear();
-        Object.values(exported.drawflow.Home.data).forEach(node => {
-            drawflowToAppId.set(String(node.id), node.data.appNodeId);
-        });
+        Object.values(exported.drawflow.Home.data).forEach(node => drawflowToAppId.set(String(node.id), node.data.appNodeId));
     } finally { importing = false; }
 }
 
@@ -108,9 +102,7 @@ export function initDrawflow(containerId = 'drawflow-container') {
         console.error('Drawflow container or library is unavailable.');
         return null;
     }
-    if (editor) {
-        editor = null;
-    }
+    if (editor) editor = null;
     editor = new window.Drawflow(container);
     editor.reroute = true;
     editor.zoom_max = 1.6;

@@ -33,6 +33,9 @@ jobs:
       - name: Validate built-in workflow templates
         run: node scripts/validate-templates.mjs
 
+      - name: Test box library handlers
+        run: node scripts/validate-box-library.mjs
+
       - name: Verify relative imports
         run: |
           node --input-type=module <<'NODE'

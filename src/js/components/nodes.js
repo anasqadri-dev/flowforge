@@ -70,7 +70,11 @@ function openSettings(drawflowId) {
         const mappings = {
             'schedule-time':'scheduleTime','transform-input':'input','variable-name':'name',
             'variable-value':'value','condition-left':'left','condition-operator':'operator',
-            'condition-right':'right','notification-message':'message','log-message':'message'
+            'condition-right':'right','notification-message':'message','log-message':'message',
+            'data-input':'input','data-path':'path','data-operator':'operator','data-value':'value','data-second':'second',
+            'text-template':'template','text-input':'input','text-search':'search','text-replacement':'replacement','text-delimiter':'delimiter',
+            'math-left':'left','math-operation':'operation','math-right':'right',
+            'random-min':'min','random-max':'max','utility-input':'input'
         };
         Object.entries(mappings).forEach(([from,to]) => { if (from in values) { values[to] = values[from]; delete values[from]; } });
         const configNext = { ...config, ...values };

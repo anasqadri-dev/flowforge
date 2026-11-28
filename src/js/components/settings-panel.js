@@ -227,6 +227,63 @@ export function renderSettingsPanel(boxName, config = {}, currentNodeId = null) 
       );
       break;
 
+
+    case 'JSON Parse':
+    case 'JSON Stringify':
+    case 'Validate JSON':
+    case 'Filter Array':
+    case 'Array Length':
+    case 'Merge Data':
+      formFields = `
+        ${textareaField('JSON / Array Input', 'data-input', config.input || '', '[{"name":"Ada","active":true}]')}
+        ${boxName === 'Filter Array' ? inputField('Property Path', 'data-path', config.path || 'active', 'text', 'active') : ''}
+        ${boxName === 'Filter Array' ? selectField('Comparison', 'data-operator', ['==','!=','contains','>','<'], config.operator || '==') : ''}
+        ${boxName === 'Filter Array' ? inputField('Compare Value', 'data-value', config.value || 'true') : ''}
+        ${boxName === 'Merge Data' ? textareaField('Second JSON Object', 'data-second', config.second || '{}') : ''}
+      `;
+      break;
+
+    case 'Format Text':
+      formFields = textareaField('Text Template', 'text-template', config.template || '', 'Hello {{name}}, welcome to FlowForge!');
+      break;
+    case 'Replace Text':
+      formFields = `
+        ${textareaField('Input Text', 'text-input', config.input || '', 'Text to process')}
+        ${inputField('Find', 'text-search', config.search || '', 'text', 'old')}
+        ${inputField('Replace With', 'text-replacement', config.replacement || '', 'text', 'new')}
+      `;
+      break;
+    case 'Split Text':
+    case 'Join Text':
+      formFields = `
+        ${textareaField('Input Text / JSON Array', 'text-input', config.input || '', boxName === 'Split Text' ? 'red,green,blue' : '["red","green","blue"]')}
+        ${inputField('Delimiter', 'text-delimiter', config.delimiter ?? ',', 'text', ',')}
+      `;
+      break;
+    case 'Math Operation':
+      formFields = `
+        ${inputField('Left Number', 'math-left', config.left ?? '10', 'number')}
+        ${selectField('Operation', 'math-operation', ['+','-','*','/','%','**'], config.operation || '+')}
+        ${inputField('Right Number', 'math-right', config.right ?? '5', 'number')}
+      `;
+      break;
+    case 'Random Number':
+      formFields = `
+        ${inputField('Minimum (inclusive)', 'random-min', config.min ?? '1', 'number')}
+        ${inputField('Maximum (inclusive)', 'random-max', config.max ?? '100', 'number')}
+      `;
+      break;
+    case 'URL Encode':
+    case 'URL Decode':
+    case 'Base64 Encode':
+    case 'Base64 Decode':
+      formFields = textareaField('Input Value', 'utility-input', config.input || '', 'Enter text or {{variable}}');
+      break;
+    case 'Generate UUID':
+    case 'Current Date & Time':
+      formFields = '<p class="no-settings">No configuration is required. This box generates its value when the workflow runs.</p>';
+      break;
+
     default:
       formFields = `
         <p class="no-settings">

@@ -33,7 +33,8 @@ The application runs entirely in the browser. It does not require a backend serv
 ## Features
 
 - Visual workflow builder with drag-and-drop nodes, connections, zoom, and pan.
-- Dynamic configuration forms for workflow nodes.
+- 28 built-in workflow boxes across triggers, HTTP/API, data/JSON, arrays, text, math/utilities, and flow control.
+- Dynamic configuration forms and executable handlers for JSON parsing/validation, array filtering, text processing, math, date/time, UUID, URL, and Base64 operations.
 - Workflow execution with sequential steps, conditions, and bounded loop bodies.
 - Variable interpolation between workflow steps.
 - Execution history with step-level inputs, outputs, and errors.
@@ -43,6 +44,12 @@ The application runs entirely in the browser. It does not require a backend serv
 - Light and dark themes.
 - Responsive application layout.
 - Text-only FlowForge sidebar wordmark and a custom SVG browser favicon.
+
+## Box library
+
+The Builder includes 28 draggable box types: Manual Start, Timer (Schedule), HTTP Request, Transform Data, Set Variable, Wait, Condition, Loop, Send Notification, Write to Log, JSON Parse, JSON Stringify, Merge Data, Validate JSON, Filter Array, Array Length, Format Text, Replace Text, Split Text, Join Text, Math Operation, Random Number, Generate UUID, Current Date & Time, URL Encode, URL Decode, Base64 Encode, and Base64 Decode.
+
+All new actions have matching settings forms and execution handlers. JSON inputs are parsed and validated, array operations require JSON arrays, math rejects invalid operands and division by zero, and Base64 helpers support Unicode text.
 
 ## Technology stack
 
