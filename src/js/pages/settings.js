@@ -77,6 +77,10 @@ export async function renderSettingsPage(container) {
         const confirmDelete = container.querySelector('#confirm-delete').checked;
         if (confirmDelete && !window.confirm('Permanently delete all saved workflows, runs, and custom templates?')) return;
 
+        // Stop a queued autosave before deleting records so it cannot recreate
+        // the active workflow while the clear operation is in progress.
+        cancelPendingAutoSave();
+
         try {
             const workflows = await getWorkflows();
             await Promise.all(workflows.map(workflow => deleteWorkflow(workflow.id)));
