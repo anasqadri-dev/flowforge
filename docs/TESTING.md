@@ -162,18 +162,15 @@ Do not mark the project fully verified until all critical checks pass on the dep
 - [ ] Cancel a paused workflow and confirm it ends with a cancelled status rather than remaining stuck.
 - [ ] Configure a retry count on an action and confirm retry events appear before a final failure/success.
 - [ ] Configure a recovery node on an action, force the action to fail, and confirm execution continues at the recovery node.
-- [ ] Confirm the live variable inspector displays global, environment, and step-created variables.
-- [ ] Configure global variables and switch environment profiles; confirm active profile values are available through interpolation.
+- [ ] Confirm the live variable inspector displays global and step-created variables.
+- [ ] Configure global variables and confirm their values are available through workflow interpolation.
 - [ ] Use CSV Parse with quoted commas and escaped quotes; use CSV Generate and download the generated file.
 - [ ] Choose a local input file, run Read File, and verify the file name and contents appear in step output.
 - [ ] Run Create File and download its output from the execution monitor.
 - [ ] Run a saved workflow through Run Sub-workflow and confirm its result is returned to the parent context.
 - [ ] Duplicate a workflow and confirm the original remains unchanged.
-- [ ] Save multiple versions, restore an earlier version, and confirm nodes/connections are restored.
-- [ ] Schedule a saved workflow for a near-future time; keep the browser tab open and confirm the scheduled run is saved.
-- [ ] Close the tab before a scheduled time and confirm the documentation clearly states background execution is not supported.
 - [ ] Export a CSV report and open the printable report, choosing Save as PDF in the browser print dialog.
-- [ ] Download a complete application backup and inspect that it contains workflows, runs, settings, variables, environments, schedules, and versions but no template payloads.
+- [ ] Download a complete application backup and inspect that it contains workflows, runs, settings, and variables but no template payloads.
 - [ ] Restore a valid backup and confirm existing data is replaced only after confirmation and a safety backup is downloaded.
 - [ ] Try malformed JSON, wrong application identifier, unsupported backup version, and oversized backup files; confirm each is rejected without changing stored data.
 - [ ] Confirm Showcase and Analytics are not present in the sidebar or route handling.
