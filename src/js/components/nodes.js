@@ -273,7 +273,7 @@ function bindExecutionMonitor() {
         output.textContent = detail.status === 'error'
             ? (detail.error || 'This step failed.')
             : JSON.stringify(detail.output ?? {}, null, 2);
-        if (detail.type === 'Create File' && detail.status === 'success' && detail.output?.readyToDownload) {
+        if (['Create File', 'CSV Generate'].includes(detail.type) && detail.status === 'success' && detail.output?.readyToDownload) {
             const download = document.createElement('button'); download.type = 'button'; download.className = 'btn'; download.textContent = 'Download ' + detail.output.filename;
             download.addEventListener('click', () => { const blob = new Blob([detail.output.content], { type: detail.output.mimeType }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = detail.output.filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }); item.append(download);
         }
@@ -306,6 +306,7 @@ function bindExecutionMonitor() {
         const result = event.detail || {};
         activeDebugRunId = result.id || activeDebugRunId;
         document.querySelectorAll('.debugger-controls button').forEach(button => { button.disabled = true; });
+        document.querySelectorAll('#drawflow-container .connection').forEach(path => path.classList.remove('execution-flow-active'));
         const succeeded = result.status === 'success';
         status.textContent = succeeded ? 'SUCCESS' : 'FAILED';
         status.className = 'run-status ' + (succeeded ? 'success' : 'error');
