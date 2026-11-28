@@ -194,44 +194,6 @@
   background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
   background-size: 20px 20px;
 }
-.canvas-hint { text-align: center; color: var(--color-text-muted); margin-top: 50px; pointer-events: none; }
-
-/* Nodes */
-.canvas-node {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--color-surface-secondary);
-  color: var(--color-text-primary);
-  padding: 10px 15px;
-  border-radius: 8px;
-  border: 2px solid var(--color-primary);
-  cursor: grab;
-  box-shadow: var(--shadow-md);
-  font-size: 13px;
-  font-weight: 500;
-  user-select: none;
-  z-index: 100;
-}
-.canvas-node.selected { box-shadow: 0 0 0 3px var(--color-primary-light); border-color: var(--color-primary); }
-
-.delete-btn { 
-  background: var(--color-danger); color: #fff; border: none; border-radius: 50%; 
-  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; 
-  cursor: pointer; font-size: 14px; margin-left: 5px; 
-}
-.delete-btn:hover { opacity: 0.8; }
-
-.dot { 
-  position: absolute; width: 10px; height: 10px; 
-  background: var(--color-primary); border: 2px solid var(--color-surface); 
-  border-radius: 50%; top: 50%; transform: translateY(-50%); z-index: 20; 
-  opacity: 0; transition: opacity 0.2s; 
-}
-.dot-left { left: -6px; }
-.dot-right { right: -6px; }
-.canvas-node:hover .dot, .canvas-node.selected .dot { opacity: 1; }
 .icon { background: var(--color-border); color: var(--color-text-primary); padding: 6px; border-radius: 6px; font-size: 12px; }
 
 /* Settings Panel */
@@ -246,7 +208,6 @@
 }
 .panel-header { padding: 15px; border-bottom: 1px solid var(--color-border); }
 .panel-header h3 { margin: 0; color: var(--color-text-primary); font-size: 16px; }
-.empty-panel { color: var(--color-text-muted); text-align: center; padding: 40px 20px; }
 .settings-form { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-group label { color: var(--color-text-secondary); font-size: 13px; }
@@ -691,27 +652,6 @@
     flex: 0 0 auto;
 }
 
-.delete-btn {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    margin-left: 4px;
-    border: 1px solid rgba(220, 69, 69, 0.22);
-    border-radius: 7px;
-    color: var(--color-danger);
-    background: rgba(220, 69, 69, 0.08);
-    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
-}
-.delete-btn [data-lucide] { width: 15px; height: 15px; }
-.delete-btn:hover {
-    color: #fff;
-    background: var(--color-danger);
-    border-color: var(--color-danger);
-}
 .close-settings {
     display: inline-flex;
     align-items: center;
@@ -735,8 +675,6 @@
     justify-content: space-between;
     gap: 12px;
 }
-.canvas-node { max-width: min(280px, calc(100% - 24px)); }
-.canvas-node .node-text { overflow-wrap: anywhere; }
 .box-menu { flex: 0 0 260px; min-width: 220px; }
 #settings-container { min-width: 0; }
 .settings-panel { max-height: calc(100vh - 40px); overflow-y: auto; }
