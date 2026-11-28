@@ -63,7 +63,7 @@ Run these checks in a modern desktop browser using the local static server or th
 
 ## 6. Templates and settings
 
-- [ ] Confirm the Templates page lists 15 built-in templates plus any saved custom templates.
+- [ ] Confirm the Templates page lists 16 built-in templates plus any saved custom templates.
 - [ ] Load every built-in template and confirm all nodes, connections, positions, and node configurations appear in Builder.
 - [ ] Load API Record Lookup and API Response Summary; confirm `{{nodeId.field}}` references still resolve after the template is cloned.
 - [ ] Load API Status Checker, Support Ticket Triage, and Required Field Validation; confirm both Condition output branches are visible and only the matching branch executes.
