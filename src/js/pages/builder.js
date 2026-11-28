@@ -26,7 +26,7 @@ export function renderBuilder() {
         <div class="box-category"><h4>Flow Control</h4>
           ${item('Condition','git-branch')}${item('Loop','repeat')}${item('Wait','timer')}
         </div>
-        <p class="box-library-count">29 available boxes</p>
+        <p class="box-library-count">28 available boxes</p>
       </aside>
       <main class="canvas-area">
         <div id="drawflow-container" aria-label="Workflow canvas"></div>
