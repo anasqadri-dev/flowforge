@@ -17,3 +17,8 @@ export function showNotification(message, duration = 3000) {
         notificationTimeout = null;
     }, duration);
 }
+
+document.addEventListener('flowforge:notify', event => {
+    const message = event.detail?.message;
+    if (typeof message === 'string' && message.trim()) showNotification(message, 5000);
+});
