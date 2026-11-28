@@ -17,7 +17,8 @@ function downloadJSON(data, filename) {
 
 export async function createApplicationBackup() {
     const { saveCurrentWorkflow } = await import('./persistence.js');
-    await saveCurrentWorkflow(false);
+    const savedActive = await saveCurrentWorkflow(false);
+    if (!savedActive) throw new Error('The active workflow could not be saved before creating the backup.');
     const [workflows, runs] = await Promise.all([getWorkflows(), getRuns()]);
     const settings = {};
     for (const key of SETTINGS_KEYS) {
