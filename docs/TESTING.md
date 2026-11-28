@@ -6,6 +6,8 @@ Run these checks in a modern desktop browser using the local static server or th
 
 - [ ] Open the application and confirm the Dashboard loads without console errors.
 - [ ] Navigate between Dashboard, Builder, Runs, Templates, and Settings using the sidebar.
+- [ ] Create a new workflow from the Dashboard while another workflow is active; confirm the previous workflow is preserved and the new workflow is empty.
+- [ ] Open an older saved workflow from the Dashboard and confirm its nodes, connections, and settings restore.
 - [ ] Confirm the active navigation item follows the current route.
 - [ ] Toggle Light/Dark theme and confirm the selection survives a page refresh.
 - [ ] Confirm icons render; if the CDN is unavailable, confirm the rest of the app remains usable.
